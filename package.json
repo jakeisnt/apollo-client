@@ -25,24 +25,29 @@
       "import": "./core/index.js",
       "require": "./core/core.cjs"
     },
+    "./link": {
+      "import": "./link/index.js",
+      "require": "./link/index.cjs"
+    },
     "./link/error": {
       "import": "./link/error/index.js",
       "require": "./link/error/error.cjs"
     },
     "./link/ws": {
       "import": "./link/ws/index.js",
-      "require": "./link/ws/http.cjs"
+      "require": "./link/ws/ws.cjs"
     },
     "./link/context": {
       "import": "./link/context/index.js",
-      "require": "./link/context/index.cjs"
+      "require": "./link/context/context.cjs"
     },
     "./utilities/policies/pagination": {
-      "import": "./utilities/policies/pagination.js"
+      "import": "./utilities/policies/pagination.js",
+      "require": "./utilities/policies/pagination.cjs"
     },
-    "./client/utilities": {
-      "import": "./client/utilities/index.js",
-      "require": "./client/utilities/utilities.cjs"
+    "./utilities": {
+      "import": "./utilities/index.js",
+      "require": "./utilities/index.cjs"
     }
   },
   "sideEffects": false,
