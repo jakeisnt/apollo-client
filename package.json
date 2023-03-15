@@ -29,8 +29,20 @@
       "import": "./link/error/index.js",
       "require": "./link/error/error.cjs"
     },
+    "./link/ws": {
+      "import": "./link/ws/index.js",
+      "require": "./link/ws/http.cjs"
+    },
+    "./link/context": {
+      "import": "./link/context/index.js",
+      "require": "./link/context/index.cjs"
+    },
     "./utilities/policies/pagination": {
       "import": "./utilities/policies/pagination.js"
+    },
+    "./client/utilities": {
+      "import": "./client/utilities/index.js",
+      "require": "./client/utilities/utilities.cjs"
     }
   },
   "sideEffects": false,
