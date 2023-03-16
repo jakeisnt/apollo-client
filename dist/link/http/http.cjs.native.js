@@ -2,130 +2,12 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-var tsInvariant = require('ts-invariant');
-var index_js = require('ts-invariant/process/index.js');
-var graphql = require('graphql');
+var globals = require('../../utilities/globals');
+var utils = require('../utils');
 var tslib = require('tslib');
-var zenObservableTs = require('zen-observable-ts');
-require('symbol-observable');
-
-function maybe(thunk) {
-    try {
-        return thunk();
-    }
-    catch (_a) { }
-}
-
-var global$1 = (maybe(function () { return globalThis; }) ||
-    maybe(function () { return window; }) ||
-    maybe(function () { return self; }) ||
-    maybe(function () { return global; }) || maybe(function () { return maybe.constructor("return this")(); }));
-
-var __ = "__";
-var GLOBAL_KEY = [__, __].join("DEV");
-function getDEV() {
-    try {
-        return Boolean(__DEV__);
-    }
-    catch (_a) {
-        Object.defineProperty(global$1, GLOBAL_KEY, {
-            value: maybe(function () { return process.env.NODE_ENV; }) !== "production",
-            enumerable: false,
-            configurable: true,
-            writable: true,
-        });
-        return global$1[GLOBAL_KEY];
-    }
-}
-var DEV = getDEV();
-
-function removeTemporaryGlobals() {
-    return typeof graphql.Source === "function" ? index_js.remove() : index_js.remove();
-}
-
-function checkDEV() {
-    __DEV__ ? tsInvariant.invariant("boolean" === typeof DEV, DEV) : tsInvariant.invariant("boolean" === typeof DEV, 36);
-}
-removeTemporaryGlobals();
-checkDEV();
-
-function getOperationName(doc) {
-    return (doc.definitions
-        .filter(function (definition) {
-        return definition.kind === 'OperationDefinition' && definition.name;
-    })
-        .map(function (x) { return x.name.value; })[0] || null);
-}
-
-function fromError(errorValue) {
-    return new zenObservableTs.Observable(function (observer) {
-        observer.error(errorValue);
-    });
-}
-
-var throwServerError = function (response, result, message) {
-    var error = new Error(message);
-    error.name = 'ServerError';
-    error.response = response;
-    error.statusCode = response.status;
-    error.result = result;
-    throw error;
-};
-
-function validateOperation(operation) {
-    var OPERATION_FIELDS = [
-        'query',
-        'operationName',
-        'variables',
-        'extensions',
-        'context',
-    ];
-    for (var _i = 0, _a = Object.keys(operation); _i < _a.length; _i++) {
-        var key = _a[_i];
-        if (OPERATION_FIELDS.indexOf(key) < 0) {
-            throw __DEV__ ? new tsInvariant.InvariantError("illegal argument: ".concat(key)) : new tsInvariant.InvariantError(24);
-        }
-    }
-    return operation;
-}
-
-function createOperation(starting, operation) {
-    var context = tslib.__assign({}, starting);
-    var setContext = function (next) {
-        if (typeof next === 'function') {
-            context = tslib.__assign(tslib.__assign({}, context), next(context));
-        }
-        else {
-            context = tslib.__assign(tslib.__assign({}, context), next);
-        }
-    };
-    var getContext = function () { return (tslib.__assign({}, context)); };
-    Object.defineProperty(operation, 'setContext', {
-        enumerable: false,
-        value: setContext,
-    });
-    Object.defineProperty(operation, 'getContext', {
-        enumerable: false,
-        value: getContext,
-    });
-    return operation;
-}
-
-function transformOperation(operation) {
-    var transformedOperation = {
-        variables: operation.variables || {},
-        extensions: operation.extensions || {},
-        operationName: operation.operationName,
-        query: operation.query,
-    };
-    if (!transformedOperation.operationName) {
-        transformedOperation.operationName =
-            typeof transformedOperation.query !== 'string'
-                ? getOperationName(transformedOperation.query) || undefined
-                : '';
-    }
-    return transformedOperation;
-}
+var graphql = require('graphql');
+var core = require('../core');
+var utilities = require('../../utilities');
 
 var hasOwnProperty = Object.prototype.hasOwnProperty;
 function parseAndCheckHttpResponse(operations) {
@@ -146,12 +28,12 @@ function parseAndCheckHttpResponse(operations) {
     })
         .then(function (result) {
         if (response.status >= 300) {
-            throwServerError(response, result, "Response not successful: Received status code ".concat(response.status));
+            utils.throwServerError(response, result, "Response not successful: Received status code ".concat(response.status));
         }
         if (!Array.isArray(result) &&
             !hasOwnProperty.call(result, 'data') &&
             !hasOwnProperty.call(result, 'errors')) {
-            throwServerError(response, result, "Server response was missing for query '".concat(Array.isArray(operations)
+            utils.throwServerError(response, result, "Server response was missing for query '".concat(Array.isArray(operations)
                 ? operations.map(function (op) { return op.operationName; })
                 : operations.operationName, "'."));
         }
@@ -165,7 +47,7 @@ var serializeFetchParameter = function (p, label) {
         serialized = JSON.stringify(p);
     }
     catch (e) {
-        var parseError = __DEV__ ? new tsInvariant.InvariantError("Network request failed. ".concat(label, " is not serializable: ").concat(e.message)) : new tsInvariant.InvariantError(21);
+        var parseError = __DEV__ ? new globals.InvariantError("Network request failed. ".concat(label, " is not serializable: ").concat(e.message)) : new globals.InvariantError(21);
         parseError.parseError = e;
         throw parseError;
     }
@@ -236,7 +118,7 @@ function headersToLowerCase(headers) {
 
 var checkFetcher = function (fetcher) {
     if (!fetcher && typeof fetch === 'undefined') {
-        throw __DEV__ ? new tsInvariant.InvariantError("\n\"fetch\" has not been found globally and no fetcher has been configured. To fix this, install a fetch package (like https://www.npmjs.com/package/cross-fetch), instantiate the fetcher, and pass it into your HttpLink constructor. For example:\n\nimport fetch from 'cross-fetch';\nimport { ApolloClient, HttpLink } from '@apollo/client';\nconst client = new ApolloClient({\n  link: new HttpLink({ uri: '/graphql', fetch })\n});\n    ") : new tsInvariant.InvariantError(20);
+        throw __DEV__ ? new globals.InvariantError("\n\"fetch\" has not been found globally and no fetcher has been configured. To fix this, install a fetch package (like https://www.npmjs.com/package/cross-fetch), instantiate the fetcher, and pass it into your HttpLink constructor. For example:\n\nimport fetch from 'cross-fetch';\nimport { ApolloClient, HttpLink } from '@apollo/client';\nconst client = new ApolloClient({\n  link: new HttpLink({ uri: '/graphql', fetch })\n});\n    ") : new globals.InvariantError(20);
     }
 };
 
@@ -261,101 +143,6 @@ var selectURI = function (operation, fallbackURI) {
         return fallbackURI || '/graphql';
     }
 };
-
-function passthrough(op, forward) {
-    return (forward ? forward(op) : zenObservableTs.Observable.of());
-}
-function toLink(handler) {
-    return typeof handler === 'function' ? new ApolloLink(handler) : handler;
-}
-function isTerminating(link) {
-    return link.request.length <= 1;
-}
-var LinkError = (function (_super) {
-    tslib.__extends(LinkError, _super);
-    function LinkError(message, link) {
-        var _this = _super.call(this, message) || this;
-        _this.link = link;
-        return _this;
-    }
-    return LinkError;
-}(Error));
-var ApolloLink = (function () {
-    function ApolloLink(request) {
-        if (request)
-            this.request = request;
-    }
-    ApolloLink.empty = function () {
-        return new ApolloLink(function () { return zenObservableTs.Observable.of(); });
-    };
-    ApolloLink.from = function (links) {
-        if (links.length === 0)
-            return ApolloLink.empty();
-        return links.map(toLink).reduce(function (x, y) { return x.concat(y); });
-    };
-    ApolloLink.split = function (test, left, right) {
-        var leftLink = toLink(left);
-        var rightLink = toLink(right || new ApolloLink(passthrough));
-        if (isTerminating(leftLink) && isTerminating(rightLink)) {
-            return new ApolloLink(function (operation) {
-                return test(operation)
-                    ? leftLink.request(operation) || zenObservableTs.Observable.of()
-                    : rightLink.request(operation) || zenObservableTs.Observable.of();
-            });
-        }
-        else {
-            return new ApolloLink(function (operation, forward) {
-                return test(operation)
-                    ? leftLink.request(operation, forward) || zenObservableTs.Observable.of()
-                    : rightLink.request(operation, forward) || zenObservableTs.Observable.of();
-            });
-        }
-    };
-    ApolloLink.execute = function (link, operation) {
-        return (link.request(createOperation(operation.context, transformOperation(validateOperation(operation)))) || zenObservableTs.Observable.of());
-    };
-    ApolloLink.concat = function (first, second) {
-        var firstLink = toLink(first);
-        if (isTerminating(firstLink)) {
-            __DEV__ && tsInvariant.invariant.warn(new LinkError("You are calling concat on a terminating link, which will have no effect", firstLink));
-            return firstLink;
-        }
-        var nextLink = toLink(second);
-        if (isTerminating(nextLink)) {
-            return new ApolloLink(function (operation) {
-                return firstLink.request(operation, function (op) { return nextLink.request(op) || zenObservableTs.Observable.of(); }) || zenObservableTs.Observable.of();
-            });
-        }
-        else {
-            return new ApolloLink(function (operation, forward) {
-                return (firstLink.request(operation, function (op) {
-                    return nextLink.request(op, forward) || zenObservableTs.Observable.of();
-                }) || zenObservableTs.Observable.of());
-            });
-        }
-    };
-    ApolloLink.prototype.split = function (test, left, right) {
-        return this.concat(ApolloLink.split(test, left, right || new ApolloLink(passthrough)));
-    };
-    ApolloLink.prototype.concat = function (next) {
-        return ApolloLink.concat(this, next);
-    };
-    ApolloLink.prototype.request = function (operation, forward) {
-        throw __DEV__ ? new tsInvariant.InvariantError('request is not implemented') : new tsInvariant.InvariantError(19);
-    };
-    ApolloLink.prototype.onError = function (error, observer) {
-        if (observer && observer.error) {
-            observer.error(error);
-            return false;
-        }
-        throw error;
-    };
-    ApolloLink.prototype.setOnError = function (fn) {
-        this.onError = fn;
-        return this;
-    };
-    return ApolloLink;
-}());
 
 function rewriteURIForGET(chosenURI, body) {
     var queryParams = [];
@@ -399,7 +186,7 @@ function rewriteURIForGET(chosenURI, body) {
     return { newURI: newURI };
 }
 
-var backupFetch = maybe(function () { return fetch; });
+var backupFetch = utilities.maybe(function () { return fetch; });
 var createHttpLink = function (linkOptions) {
     if (linkOptions === void 0) { linkOptions = {}; }
     var _a = linkOptions.uri, uri = _a === void 0 ? '/graphql' : _a, preferredFetch = linkOptions.fetch, _b = linkOptions.print, print = _b === void 0 ? defaultPrinter : _b, includeExtensions = linkOptions.includeExtensions, useGETForQueries = linkOptions.useGETForQueries, _c = linkOptions.includeUnusedVariables, includeUnusedVariables = _c === void 0 ? false : _c, requestOptions = tslib.__rest(linkOptions, ["uri", "fetch", "print", "includeExtensions", "useGETForQueries", "includeUnusedVariables"]);
@@ -412,7 +199,7 @@ var createHttpLink = function (linkOptions) {
         credentials: requestOptions.credentials,
         headers: requestOptions.headers,
     };
-    return new ApolloLink(function (operation) {
+    return new core.ApolloLink(function (operation) {
         var chosenURI = selectURI(operation, uri);
         var context = operation.getContext();
         var clientAwarenessHeaders = {};
@@ -466,7 +253,7 @@ var createHttpLink = function (linkOptions) {
         if (options.method === 'GET') {
             var _d = rewriteURIForGET(chosenURI, body), newURI = _d.newURI, parseError = _d.parseError;
             if (parseError) {
-                return fromError(parseError);
+                return utils.fromError(parseError);
             }
             chosenURI = newURI;
         }
@@ -475,11 +262,11 @@ var createHttpLink = function (linkOptions) {
                 options.body = serializeFetchParameter(body, 'Payload');
             }
             catch (parseError) {
-                return fromError(parseError);
+                return utils.fromError(parseError);
             }
         }
-        return new zenObservableTs.Observable(function (observer) {
-            var currentFetch = preferredFetch || maybe(function () { return fetch; }) || backupFetch;
+        return new utilities.Observable(function (observer) {
+            var currentFetch = preferredFetch || utilities.maybe(function () { return fetch; }) || backupFetch;
             currentFetch(chosenURI, options)
                 .then(function (response) {
                 operation.setContext({ response: response });
@@ -516,7 +303,7 @@ var HttpLink = (function (_super) {
         return _this;
     }
     return HttpLink;
-}(ApolloLink));
+}(core.ApolloLink));
 
 exports.HttpLink = HttpLink;
 exports.checkFetcher = checkFetcher;

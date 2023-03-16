@@ -2,49 +2,7 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-var tsInvariant = require('ts-invariant');
-var index_js = require('ts-invariant/process/index.js');
-var graphql = require('graphql');
-
-function maybe(thunk) {
-    try {
-        return thunk();
-    }
-    catch (_a) { }
-}
-
-var global$1 = (maybe(function () { return globalThis; }) ||
-    maybe(function () { return window; }) ||
-    maybe(function () { return self; }) ||
-    maybe(function () { return global; }) || maybe(function () { return maybe.constructor("return this")(); }));
-
-var __ = "__";
-var GLOBAL_KEY = [__, __].join("DEV");
-function getDEV() {
-    try {
-        return Boolean(__DEV__);
-    }
-    catch (_a) {
-        Object.defineProperty(global$1, GLOBAL_KEY, {
-            value: maybe(function () { return process.env.NODE_ENV; }) !== "production",
-            enumerable: false,
-            configurable: true,
-            writable: true,
-        });
-        return global$1[GLOBAL_KEY];
-    }
-}
-var DEV = getDEV();
-
-function removeTemporaryGlobals() {
-    return typeof graphql.Source === "function" ? index_js.remove() : index_js.remove();
-}
-
-function checkDEV() {
-    __DEV__ ? tsInvariant.invariant("boolean" === typeof DEV, DEV) : tsInvariant.invariant("boolean" === typeof DEV, 36);
-}
-removeTemporaryGlobals();
-checkDEV();
+var globals = require('../../utilities/globals');
 
 exports.DocumentType = void 0;
 (function (DocumentType) {
@@ -73,9 +31,9 @@ function parser(document) {
     if (cached)
         return cached;
     var variables, type, name;
-    __DEV__ ? tsInvariant.invariant(!!document && !!document.kind, "Argument of ".concat(document, " passed to parser was not a valid GraphQL ") +
+    __DEV__ ? globals.invariant(!!document && !!document.kind, "Argument of ".concat(document, " passed to parser was not a valid GraphQL ") +
         "DocumentNode. You may need to use 'graphql-tag' or another method " +
-        "to convert your operation into a document") : tsInvariant.invariant(!!document && !!document.kind, 30);
+        "to convert your operation into a document") : globals.invariant(!!document && !!document.kind, 30);
     var fragments = [];
     var queries = [];
     var mutations = [];
@@ -100,14 +58,14 @@ function parser(document) {
             }
         }
     }
-    __DEV__ ? tsInvariant.invariant(!fragments.length ||
+    __DEV__ ? globals.invariant(!fragments.length ||
         (queries.length || mutations.length || subscriptions.length), "Passing only a fragment to 'graphql' is not yet supported. " +
-        "You must include a query, subscription or mutation as well") : tsInvariant.invariant(!fragments.length ||
+        "You must include a query, subscription or mutation as well") : globals.invariant(!fragments.length ||
         (queries.length || mutations.length || subscriptions.length), 31);
-    __DEV__ ? tsInvariant.invariant(queries.length + mutations.length + subscriptions.length <= 1, "react-apollo only supports a query, subscription, or a mutation per HOC. " +
+    __DEV__ ? globals.invariant(queries.length + mutations.length + subscriptions.length <= 1, "react-apollo only supports a query, subscription, or a mutation per HOC. " +
         "".concat(document, " had ").concat(queries.length, " queries, ").concat(subscriptions.length, " ") +
         "subscriptions and ".concat(mutations.length, " mutations. ") +
-        "You can use 'compose' to join multiple operation types to a component") : tsInvariant.invariant(queries.length + mutations.length + subscriptions.length <= 1, 32);
+        "You can use 'compose' to join multiple operation types to a component") : globals.invariant(queries.length + mutations.length + subscriptions.length <= 1, 32);
     type = queries.length ? exports.DocumentType.Query : exports.DocumentType.Mutation;
     if (!queries.length && !mutations.length)
         type = exports.DocumentType.Subscription;
@@ -116,9 +74,9 @@ function parser(document) {
         : mutations.length
             ? mutations
             : subscriptions;
-    __DEV__ ? tsInvariant.invariant(definitions.length === 1, "react-apollo only supports one definition per HOC. ".concat(document, " had ") +
+    __DEV__ ? globals.invariant(definitions.length === 1, "react-apollo only supports one definition per HOC. ".concat(document, " had ") +
         "".concat(definitions.length, " definitions. ") +
-        "You can use 'compose' to join multiple operation types to a component") : tsInvariant.invariant(definitions.length === 1, 33);
+        "You can use 'compose' to join multiple operation types to a component") : globals.invariant(definitions.length === 1, 33);
     var definition = definitions[0];
     variables = definition.variableDefinitions || [];
     if (definition.name && definition.name.kind === 'Name') {
@@ -135,8 +93,8 @@ function verifyDocumentType(document, type) {
     var operation = parser(document);
     var requiredOperationName = operationName(type);
     var usedOperationName = operationName(operation.type);
-    __DEV__ ? tsInvariant.invariant(operation.type === type, "Running a ".concat(requiredOperationName, " requires a graphql ") +
-        "".concat(requiredOperationName, ", but a ").concat(usedOperationName, " was used instead.")) : tsInvariant.invariant(operation.type === type, 34);
+    __DEV__ ? globals.invariant(operation.type === type, "Running a ".concat(requiredOperationName, " requires a graphql ") +
+        "".concat(requiredOperationName, ", but a ").concat(usedOperationName, " was used instead.")) : globals.invariant(operation.type === type, 34);
 }
 
 exports.operationName = operationName;

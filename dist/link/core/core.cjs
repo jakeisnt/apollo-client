@@ -2,118 +2,13 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-var tsInvariant = require('ts-invariant');
-var index_js = require('ts-invariant/process/index.js');
-var graphql = require('graphql');
+var globals = require('../../utilities/globals');
 var tslib = require('tslib');
-var zenObservableTs = require('zen-observable-ts');
-require('symbol-observable');
-
-function maybe(thunk) {
-    try {
-        return thunk();
-    }
-    catch (_a) { }
-}
-
-var global$1 = (maybe(function () { return globalThis; }) ||
-    maybe(function () { return window; }) ||
-    maybe(function () { return self; }) ||
-    maybe(function () { return global; }) || maybe(function () { return maybe.constructor("return this")(); }));
-
-var __ = "__";
-var GLOBAL_KEY = [__, __].join("DEV");
-function getDEV() {
-    try {
-        return Boolean(__DEV__);
-    }
-    catch (_a) {
-        Object.defineProperty(global$1, GLOBAL_KEY, {
-            value: maybe(function () { return process.env.NODE_ENV; }) !== "production",
-            enumerable: false,
-            configurable: true,
-            writable: true,
-        });
-        return global$1[GLOBAL_KEY];
-    }
-}
-var DEV = getDEV();
-
-function removeTemporaryGlobals() {
-    return typeof graphql.Source === "function" ? index_js.remove() : index_js.remove();
-}
-
-function checkDEV() {
-    __DEV__ ? tsInvariant.invariant("boolean" === typeof DEV, DEV) : tsInvariant.invariant("boolean" === typeof DEV, 36);
-}
-removeTemporaryGlobals();
-checkDEV();
-
-function getOperationName(doc) {
-    return (doc.definitions
-        .filter(function (definition) {
-        return definition.kind === 'OperationDefinition' && definition.name;
-    })
-        .map(function (x) { return x.name.value; })[0] || null);
-}
-
-function validateOperation(operation) {
-    var OPERATION_FIELDS = [
-        'query',
-        'operationName',
-        'variables',
-        'extensions',
-        'context',
-    ];
-    for (var _i = 0, _a = Object.keys(operation); _i < _a.length; _i++) {
-        var key = _a[_i];
-        if (OPERATION_FIELDS.indexOf(key) < 0) {
-            throw __DEV__ ? new tsInvariant.InvariantError("illegal argument: ".concat(key)) : new tsInvariant.InvariantError(24);
-        }
-    }
-    return operation;
-}
-
-function createOperation(starting, operation) {
-    var context = tslib.__assign({}, starting);
-    var setContext = function (next) {
-        if (typeof next === 'function') {
-            context = tslib.__assign(tslib.__assign({}, context), next(context));
-        }
-        else {
-            context = tslib.__assign(tslib.__assign({}, context), next);
-        }
-    };
-    var getContext = function () { return (tslib.__assign({}, context)); };
-    Object.defineProperty(operation, 'setContext', {
-        enumerable: false,
-        value: setContext,
-    });
-    Object.defineProperty(operation, 'getContext', {
-        enumerable: false,
-        value: getContext,
-    });
-    return operation;
-}
-
-function transformOperation(operation) {
-    var transformedOperation = {
-        variables: operation.variables || {},
-        extensions: operation.extensions || {},
-        operationName: operation.operationName,
-        query: operation.query,
-    };
-    if (!transformedOperation.operationName) {
-        transformedOperation.operationName =
-            typeof transformedOperation.query !== 'string'
-                ? getOperationName(transformedOperation.query) || undefined
-                : '';
-    }
-    return transformedOperation;
-}
+var utilities = require('../../utilities');
+var utils = require('../utils');
 
 function passthrough(op, forward) {
-    return (forward ? forward(op) : zenObservableTs.Observable.of());
+    return (forward ? forward(op) : utilities.Observable.of());
 }
 function toLink(handler) {
     return typeof handler === 'function' ? new ApolloLink(handler) : handler;
@@ -136,7 +31,7 @@ var ApolloLink = (function () {
             this.request = request;
     }
     ApolloLink.empty = function () {
-        return new ApolloLink(function () { return zenObservableTs.Observable.of(); });
+        return new ApolloLink(function () { return utilities.Observable.of(); });
     };
     ApolloLink.from = function (links) {
         if (links.length === 0)
@@ -149,38 +44,38 @@ var ApolloLink = (function () {
         if (isTerminating(leftLink) && isTerminating(rightLink)) {
             return new ApolloLink(function (operation) {
                 return test(operation)
-                    ? leftLink.request(operation) || zenObservableTs.Observable.of()
-                    : rightLink.request(operation) || zenObservableTs.Observable.of();
+                    ? leftLink.request(operation) || utilities.Observable.of()
+                    : rightLink.request(operation) || utilities.Observable.of();
             });
         }
         else {
             return new ApolloLink(function (operation, forward) {
                 return test(operation)
-                    ? leftLink.request(operation, forward) || zenObservableTs.Observable.of()
-                    : rightLink.request(operation, forward) || zenObservableTs.Observable.of();
+                    ? leftLink.request(operation, forward) || utilities.Observable.of()
+                    : rightLink.request(operation, forward) || utilities.Observable.of();
             });
         }
     };
     ApolloLink.execute = function (link, operation) {
-        return (link.request(createOperation(operation.context, transformOperation(validateOperation(operation)))) || zenObservableTs.Observable.of());
+        return (link.request(utils.createOperation(operation.context, utils.transformOperation(utils.validateOperation(operation)))) || utilities.Observable.of());
     };
     ApolloLink.concat = function (first, second) {
         var firstLink = toLink(first);
         if (isTerminating(firstLink)) {
-            __DEV__ && tsInvariant.invariant.warn(new LinkError("You are calling concat on a terminating link, which will have no effect", firstLink));
+            __DEV__ && globals.invariant.warn(new LinkError("You are calling concat on a terminating link, which will have no effect", firstLink));
             return firstLink;
         }
         var nextLink = toLink(second);
         if (isTerminating(nextLink)) {
             return new ApolloLink(function (operation) {
-                return firstLink.request(operation, function (op) { return nextLink.request(op) || zenObservableTs.Observable.of(); }) || zenObservableTs.Observable.of();
+                return firstLink.request(operation, function (op) { return nextLink.request(op) || utilities.Observable.of(); }) || utilities.Observable.of();
             });
         }
         else {
             return new ApolloLink(function (operation, forward) {
                 return (firstLink.request(operation, function (op) {
-                    return nextLink.request(op, forward) || zenObservableTs.Observable.of();
-                }) || zenObservableTs.Observable.of());
+                    return nextLink.request(op, forward) || utilities.Observable.of();
+                }) || utilities.Observable.of());
             });
         }
     };
@@ -191,7 +86,7 @@ var ApolloLink = (function () {
         return ApolloLink.concat(this, next);
     };
     ApolloLink.prototype.request = function (operation, forward) {
-        throw __DEV__ ? new tsInvariant.InvariantError('request is not implemented') : new tsInvariant.InvariantError(19);
+        throw __DEV__ ? new globals.InvariantError('request is not implemented') : new globals.InvariantError(19);
     };
     ApolloLink.prototype.onError = function (error, observer) {
         if (observer && observer.error) {

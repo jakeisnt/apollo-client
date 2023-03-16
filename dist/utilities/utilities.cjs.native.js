@@ -2,52 +2,11 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-var tsInvariant = require('ts-invariant');
-var index_js = require('ts-invariant/process/index.js');
+var globals = require('./globals');
 var graphql = require('graphql');
 var tslib = require('tslib');
 var zenObservableTs = require('zen-observable-ts');
 require('symbol-observable');
-
-function maybe(thunk) {
-    try {
-        return thunk();
-    }
-    catch (_a) { }
-}
-
-var global$1 = (maybe(function () { return globalThis; }) ||
-    maybe(function () { return window; }) ||
-    maybe(function () { return self; }) ||
-    maybe(function () { return global; }) || maybe(function () { return maybe.constructor("return this")(); }));
-
-var __ = "__";
-var GLOBAL_KEY = [__, __].join("DEV");
-function getDEV() {
-    try {
-        return Boolean(__DEV__);
-    }
-    catch (_a) {
-        Object.defineProperty(global$1, GLOBAL_KEY, {
-            value: maybe(function () { return process.env.NODE_ENV; }) !== "production",
-            enumerable: false,
-            configurable: true,
-            writable: true,
-        });
-        return global$1[GLOBAL_KEY];
-    }
-}
-var DEV = getDEV();
-
-function removeTemporaryGlobals() {
-    return typeof graphql.Source === "function" ? index_js.remove() : index_js.remove();
-}
-
-function checkDEV() {
-    __DEV__ ? tsInvariant.invariant("boolean" === typeof DEV, DEV) : tsInvariant.invariant("boolean" === typeof DEV, 36);
-}
-removeTemporaryGlobals();
-checkDEV();
 
 function shouldInclude(_a, variables) {
     var directives = _a.directives;
@@ -59,7 +18,7 @@ function shouldInclude(_a, variables) {
         var evaledValue = false;
         if (ifArgument.value.kind === 'Variable') {
             evaledValue = variables && variables[ifArgument.value.name.value];
-            __DEV__ ? tsInvariant.invariant(evaledValue !== void 0, "Invalid variable referenced in @".concat(directive.name.value, " directive.")) : tsInvariant.invariant(evaledValue !== void 0, 37);
+            __DEV__ ? globals.invariant(evaledValue !== void 0, "Invalid variable referenced in @".concat(directive.name.value, " directive.")) : globals.invariant(evaledValue !== void 0, 37);
         }
         else {
             evaledValue = ifArgument.value.value;
@@ -96,12 +55,12 @@ function getInclusionDirectives(directives) {
                 return;
             var directiveArguments = directive.arguments;
             var directiveName = directive.name.value;
-            __DEV__ ? tsInvariant.invariant(directiveArguments && directiveArguments.length === 1, "Incorrect number of arguments for the @".concat(directiveName, " directive.")) : tsInvariant.invariant(directiveArguments && directiveArguments.length === 1, 38);
+            __DEV__ ? globals.invariant(directiveArguments && directiveArguments.length === 1, "Incorrect number of arguments for the @".concat(directiveName, " directive.")) : globals.invariant(directiveArguments && directiveArguments.length === 1, 38);
             var ifArgument = directiveArguments[0];
-            __DEV__ ? tsInvariant.invariant(ifArgument.name && ifArgument.name.value === 'if', "Invalid argument for the @".concat(directiveName, " directive.")) : tsInvariant.invariant(ifArgument.name && ifArgument.name.value === 'if', 39);
+            __DEV__ ? globals.invariant(ifArgument.name && ifArgument.name.value === 'if', "Invalid argument for the @".concat(directiveName, " directive.")) : globals.invariant(ifArgument.name && ifArgument.name.value === 'if', 39);
             var ifValue = ifArgument.value;
-            __DEV__ ? tsInvariant.invariant(ifValue &&
-                (ifValue.kind === 'Variable' || ifValue.kind === 'BooleanValue'), "Argument for the @".concat(directiveName, " directive must be a variable or a boolean value.")) : tsInvariant.invariant(ifValue &&
+            __DEV__ ? globals.invariant(ifValue &&
+                (ifValue.kind === 'Variable' || ifValue.kind === 'BooleanValue'), "Argument for the @".concat(directiveName, " directive must be a variable or a boolean value.")) : globals.invariant(ifValue &&
                 (ifValue.kind === 'Variable' || ifValue.kind === 'BooleanValue'), 40);
             result.push({ directive: directive, ifArgument: ifArgument });
         });
@@ -114,15 +73,15 @@ function getFragmentQueryDocument(document, fragmentName) {
     var fragments = [];
     document.definitions.forEach(function (definition) {
         if (definition.kind === 'OperationDefinition') {
-            throw __DEV__ ? new tsInvariant.InvariantError("Found a ".concat(definition.operation, " operation").concat(definition.name ? " named '".concat(definition.name.value, "'") : '', ". ") +
-                'No operations are allowed when using a fragment as a query. Only fragments are allowed.') : new tsInvariant.InvariantError(41);
+            throw __DEV__ ? new globals.InvariantError("Found a ".concat(definition.operation, " operation").concat(definition.name ? " named '".concat(definition.name.value, "'") : '', ". ") +
+                'No operations are allowed when using a fragment as a query. Only fragments are allowed.') : new globals.InvariantError(41);
         }
         if (definition.kind === 'FragmentDefinition') {
             fragments.push(definition);
         }
     });
     if (typeof actualFragmentName === 'undefined') {
-        __DEV__ ? tsInvariant.invariant(fragments.length === 1, "Found ".concat(fragments.length, " fragments. `fragmentName` must be provided when there is not exactly 1 fragment.")) : tsInvariant.invariant(fragments.length === 1, 42);
+        __DEV__ ? globals.invariant(fragments.length === 1, "Found ".concat(fragments.length, " fragments. `fragmentName` must be provided when there is not exactly 1 fragment.")) : globals.invariant(fragments.length === 1, 42);
         actualFragmentName = fragments[0].name.value;
     }
     var query = tslib.__assign(tslib.__assign({}, document), { definitions: tslib.__spreadArray([
@@ -159,7 +118,7 @@ function getFragmentFromSelection(selection, fragmentMap) {
             return selection;
         case 'FragmentSpread': {
             var fragment = fragmentMap && fragmentMap[selection.name.value];
-            __DEV__ ? tsInvariant.invariant(fragment, "No fragment named ".concat(selection.name.value, ".")) : tsInvariant.invariant(fragment, 43);
+            __DEV__ ? globals.invariant(fragment, "No fragment named ".concat(selection.name.value, ".")) : globals.invariant(fragment, 43);
             return fragment;
         }
         default:
@@ -241,9 +200,9 @@ function valueToObjectRepresentation(argObj, name, value, variables) {
         argObj[name.value] = null;
     }
     else {
-        throw __DEV__ ? new tsInvariant.InvariantError("The inline argument \"".concat(name.value, "\" of kind \"").concat(value.kind, "\"") +
+        throw __DEV__ ? new globals.InvariantError("The inline argument \"".concat(name.value, "\" of kind \"").concat(value.kind, "\"") +
             'is not supported. Use variables instead of inline arguments to ' +
-            'overcome this limitation.') : new tsInvariant.InvariantError(52);
+            'overcome this limitation.') : new globals.InvariantError(52);
     }
 }
 function storeKeyNameFromField(field, variables) {
@@ -377,16 +336,16 @@ function isInlineFragment(selection) {
 }
 
 function checkDocument(doc) {
-    __DEV__ ? tsInvariant.invariant(doc && doc.kind === 'Document', "Expecting a parsed GraphQL document. Perhaps you need to wrap the query string in a \"gql\" tag? http://docs.apollostack.com/apollo-client/core.html#gql") : tsInvariant.invariant(doc && doc.kind === 'Document', 44);
+    __DEV__ ? globals.invariant(doc && doc.kind === 'Document', "Expecting a parsed GraphQL document. Perhaps you need to wrap the query string in a \"gql\" tag? http://docs.apollostack.com/apollo-client/core.html#gql") : globals.invariant(doc && doc.kind === 'Document', 44);
     var operations = doc.definitions
         .filter(function (d) { return d.kind !== 'FragmentDefinition'; })
         .map(function (definition) {
         if (definition.kind !== 'OperationDefinition') {
-            throw __DEV__ ? new tsInvariant.InvariantError("Schema type definitions not allowed in queries. Found: \"".concat(definition.kind, "\"")) : new tsInvariant.InvariantError(45);
+            throw __DEV__ ? new globals.InvariantError("Schema type definitions not allowed in queries. Found: \"".concat(definition.kind, "\"")) : new globals.InvariantError(45);
         }
         return definition;
     });
-    __DEV__ ? tsInvariant.invariant(operations.length <= 1, "Ambiguous GraphQL document: contains ".concat(operations.length, " operations")) : tsInvariant.invariant(operations.length <= 1, 46);
+    __DEV__ ? globals.invariant(operations.length <= 1, "Ambiguous GraphQL document: contains ".concat(operations.length, " operations")) : globals.invariant(operations.length <= 1, 46);
     return doc;
 }
 function getOperationDefinition(doc) {
@@ -405,14 +364,14 @@ function getFragmentDefinitions(doc) {
 }
 function getQueryDefinition(doc) {
     var queryDef = getOperationDefinition(doc);
-    __DEV__ ? tsInvariant.invariant(queryDef && queryDef.operation === 'query', 'Must contain a query definition.') : tsInvariant.invariant(queryDef && queryDef.operation === 'query', 47);
+    __DEV__ ? globals.invariant(queryDef && queryDef.operation === 'query', 'Must contain a query definition.') : globals.invariant(queryDef && queryDef.operation === 'query', 47);
     return queryDef;
 }
 function getFragmentDefinition(doc) {
-    __DEV__ ? tsInvariant.invariant(doc.kind === 'Document', "Expecting a parsed GraphQL document. Perhaps you need to wrap the query string in a \"gql\" tag? http://docs.apollostack.com/apollo-client/core.html#gql") : tsInvariant.invariant(doc.kind === 'Document', 48);
-    __DEV__ ? tsInvariant.invariant(doc.definitions.length <= 1, 'Fragment must have exactly one definition.') : tsInvariant.invariant(doc.definitions.length <= 1, 49);
+    __DEV__ ? globals.invariant(doc.kind === 'Document', "Expecting a parsed GraphQL document. Perhaps you need to wrap the query string in a \"gql\" tag? http://docs.apollostack.com/apollo-client/core.html#gql") : globals.invariant(doc.kind === 'Document', 48);
+    __DEV__ ? globals.invariant(doc.definitions.length <= 1, 'Fragment must have exactly one definition.') : globals.invariant(doc.definitions.length <= 1, 49);
     var fragmentDef = doc.definitions[0];
-    __DEV__ ? tsInvariant.invariant(fragmentDef.kind === 'FragmentDefinition', 'Must be a fragment definition.') : tsInvariant.invariant(fragmentDef.kind === 'FragmentDefinition', 50);
+    __DEV__ ? globals.invariant(fragmentDef.kind === 'FragmentDefinition', 'Must be a fragment definition.') : globals.invariant(fragmentDef.kind === 'FragmentDefinition', 50);
     return fragmentDef;
 }
 function getMainDefinition(queryDoc) {
@@ -435,7 +394,7 @@ function getMainDefinition(queryDoc) {
     if (fragmentDefinition) {
         return fragmentDefinition;
     }
-    throw __DEV__ ? new tsInvariant.InvariantError('Expected a parsed GraphQL query with a query, mutation, subscription, or a fragment.') : new tsInvariant.InvariantError(51);
+    throw __DEV__ ? new globals.InvariantError('Expected a parsed GraphQL query with a query, mutation, subscription, or a fragment.') : new globals.InvariantError(51);
 }
 function getDefaultValues(definition) {
     var defaultValues = Object.create(null);
@@ -593,7 +552,7 @@ var connectionRemoveConfig = {
         if (willRemove) {
             if (!directive.arguments ||
                 !directive.arguments.some(function (arg) { return arg.name.value === 'key'; })) {
-                __DEV__ && tsInvariant.invariant.warn('Removing an @connection directive even though it does not have a key. ' +
+                __DEV__ && globals.invariant.warn('Removing an @connection directive even though it does not have a key. ' +
                     'You may want to use the key parameter to specify a store key.');
             }
         }
@@ -1058,12 +1017,12 @@ function asyncMap(observable, mapFn, catchFn) {
 }
 
 var canUseWeakMap = typeof WeakMap === 'function' &&
-    maybe(function () { return navigator.product; }) !== 'ReactNative';
+    globals.maybe(function () { return navigator.product; }) !== 'ReactNative';
 var canUseWeakSet = typeof WeakSet === 'function';
 var canUseSymbol = typeof Symbol === 'function' &&
     typeof Symbol.for === 'function';
-var canUseDOM = typeof maybe(function () { return window.document.createElement; }) === "function";
-var usingJSDOM = maybe(function () { return navigator.userAgent.indexOf("jsdom") >= 0; }) || false;
+var canUseDOM = typeof globals.maybe(function () { return window.document.createElement; }) === "function";
+var usingJSDOM = globals.maybe(function () { return navigator.userAgent.indexOf("jsdom") >= 0; }) || false;
 var canUseLayoutEffect = canUseDOM && !usingJSDOM;
 
 function fixObservableSubclass(subclass) {
@@ -1258,9 +1217,10 @@ function mergeOptions(defaults, options) {
     });
 }
 
+exports.DEV = globals.DEV;
+exports.maybe = globals.maybe;
 exports.Observable = zenObservableTs.Observable;
 exports.Concast = Concast;
-exports.DEV = DEV;
 exports.DeepMerger = DeepMerger;
 exports.addTypenameToDocument = addTypenameToDocument;
 exports.argumentsObjectFromField = argumentsObjectFromField;
@@ -1302,7 +1262,6 @@ exports.isReference = isReference;
 exports.iterateObserversSafely = iterateObserversSafely;
 exports.makeReference = makeReference;
 exports.makeUniqueId = makeUniqueId;
-exports.maybe = maybe;
 exports.maybeDeepFreeze = maybeDeepFreeze;
 exports.mergeDeep = mergeDeep;
 exports.mergeDeepArray = mergeDeepArray;

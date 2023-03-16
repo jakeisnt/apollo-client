@@ -4,11 +4,10 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 var tslib = require('tslib');
 var tsInvariant = require('ts-invariant');
-var index_js = require('ts-invariant/process/index.js');
-var graphql = require('graphql');
 var equality = require('@wry/equality');
 var zenObservableTs = require('zen-observable-ts');
 require('symbol-observable');
+var graphql = require('graphql');
 var optimism = require('optimism');
 var context = require('@wry/context');
 var trie = require('@wry/trie');
@@ -35,39 +34,6 @@ function maybe(thunk) {
     }
     catch (_a) { }
 }
-
-var global$1 = (maybe(function () { return globalThis; }) ||
-    maybe(function () { return window; }) ||
-    maybe(function () { return self; }) ||
-    maybe(function () { return global; }) || maybe(function () { return maybe.constructor("return this")(); }));
-
-var __ = "__";
-var GLOBAL_KEY = [__, __].join("DEV");
-function getDEV() {
-    try {
-        return Boolean(__DEV__);
-    }
-    catch (_a) {
-        Object.defineProperty(global$1, GLOBAL_KEY, {
-            value: maybe(function () { return process.env.NODE_ENV; }) !== "production",
-            enumerable: false,
-            configurable: true,
-            writable: true,
-        });
-        return global$1[GLOBAL_KEY];
-    }
-}
-var DEV = getDEV();
-
-function removeTemporaryGlobals() {
-    return typeof graphql.Source === "function" ? index_js.remove() : index_js.remove();
-}
-
-function checkDEV() {
-    __DEV__ ? tsInvariant.invariant("boolean" === typeof DEV, DEV) : tsInvariant.invariant("boolean" === typeof DEV, 36);
-}
-removeTemporaryGlobals();
-checkDEV();
 
 function shouldInclude(_a, variables) {
     var directives = _a.directives;

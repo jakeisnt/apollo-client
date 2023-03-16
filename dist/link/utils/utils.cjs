@@ -2,63 +2,12 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-var tsInvariant = require('ts-invariant');
-var index_js = require('ts-invariant/process/index.js');
-var graphql = require('graphql');
-var zenObservableTs = require('zen-observable-ts');
-require('symbol-observable');
+var globals = require('../../utilities/globals');
+var utilities = require('../../utilities');
 var tslib = require('tslib');
 
-function maybe(thunk) {
-    try {
-        return thunk();
-    }
-    catch (_a) { }
-}
-
-var global$1 = (maybe(function () { return globalThis; }) ||
-    maybe(function () { return window; }) ||
-    maybe(function () { return self; }) ||
-    maybe(function () { return global; }) || maybe(function () { return maybe.constructor("return this")(); }));
-
-var __ = "__";
-var GLOBAL_KEY = [__, __].join("DEV");
-function getDEV() {
-    try {
-        return Boolean(__DEV__);
-    }
-    catch (_a) {
-        Object.defineProperty(global$1, GLOBAL_KEY, {
-            value: maybe(function () { return process.env.NODE_ENV; }) !== "production",
-            enumerable: false,
-            configurable: true,
-            writable: true,
-        });
-        return global$1[GLOBAL_KEY];
-    }
-}
-var DEV = getDEV();
-
-function removeTemporaryGlobals() {
-    return typeof graphql.Source === "function" ? index_js.remove() : index_js.remove();
-}
-
-function checkDEV() {
-    __DEV__ ? tsInvariant.invariant("boolean" === typeof DEV, DEV) : tsInvariant.invariant("boolean" === typeof DEV, 36);
-}
-removeTemporaryGlobals();
-checkDEV();
-
-function getOperationName(doc) {
-    return (doc.definitions
-        .filter(function (definition) {
-        return definition.kind === 'OperationDefinition' && definition.name;
-    })
-        .map(function (x) { return x.name.value; })[0] || null);
-}
-
 function fromError(errorValue) {
-    return new zenObservableTs.Observable(function (observer) {
+    return new utilities.Observable(function (observer) {
         observer.error(errorValue);
     });
 }
@@ -69,7 +18,7 @@ function toPromise(observable) {
         observable.subscribe({
             next: function (data) {
                 if (completed) {
-                    __DEV__ && tsInvariant.invariant.warn("Promise Wrapper does not support multiple results from Observable");
+                    __DEV__ && globals.invariant.warn("Promise Wrapper does not support multiple results from Observable");
                 }
                 else {
                     completed = true;
@@ -82,7 +31,7 @@ function toPromise(observable) {
 }
 
 function fromPromise(promise) {
-    return new zenObservableTs.Observable(function (observer) {
+    return new utilities.Observable(function (observer) {
         promise
             .then(function (value) {
             observer.next(value);
@@ -112,7 +61,7 @@ function validateOperation(operation) {
     for (var _i = 0, _a = Object.keys(operation); _i < _a.length; _i++) {
         var key = _a[_i];
         if (OPERATION_FIELDS.indexOf(key) < 0) {
-            throw __DEV__ ? new tsInvariant.InvariantError("illegal argument: ".concat(key)) : new tsInvariant.InvariantError(24);
+            throw __DEV__ ? new globals.InvariantError("illegal argument: ".concat(key)) : new globals.InvariantError(24);
         }
     }
     return operation;
@@ -150,7 +99,7 @@ function transformOperation(operation) {
     if (!transformedOperation.operationName) {
         transformedOperation.operationName =
             typeof transformedOperation.query !== 'string'
-                ? getOperationName(transformedOperation.query) || undefined
+                ? utilities.getOperationName(transformedOperation.query) || undefined
                 : '';
     }
     return transformedOperation;

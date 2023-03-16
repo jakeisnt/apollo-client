@@ -2,12 +2,15 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-var tsInvariant = require('ts-invariant');
-var index_js = require('ts-invariant/process/index.js');
-var graphql = require('graphql');
+var globals = require('../../utilities/globals');
 var React = require('react');
+var context = require('../context');
 var tslib = require('tslib');
+var utilities = require('../../utilities');
 var equality = require('@wry/equality');
+var core = require('../../core');
+var errors = require('../../errors');
+var parser = require('../parser');
 
 function _interopNamespace(e) {
     if (e && e.__esModule) return e;
@@ -23,143 +26,12 @@ function _interopNamespace(e) {
 
 var React__namespace = /*#__PURE__*/_interopNamespace(React);
 
-function maybe(thunk) {
-    try {
-        return thunk();
-    }
-    catch (_a) { }
-}
-
-var global$1 = (maybe(function () { return globalThis; }) ||
-    maybe(function () { return window; }) ||
-    maybe(function () { return self; }) ||
-    maybe(function () { return global; }) || maybe(function () { return maybe.constructor("return this")(); }));
-
-var __ = "__";
-var GLOBAL_KEY = [__, __].join("DEV");
-function getDEV() {
-    try {
-        return Boolean(__DEV__);
-    }
-    catch (_a) {
-        Object.defineProperty(global$1, GLOBAL_KEY, {
-            value: maybe(function () { return process.env.NODE_ENV; }) !== "production",
-            enumerable: false,
-            configurable: true,
-            writable: true,
-        });
-        return global$1[GLOBAL_KEY];
-    }
-}
-var DEV = getDEV();
-
-function removeTemporaryGlobals() {
-    return typeof graphql.Source === "function" ? index_js.remove() : index_js.remove();
-}
-
-function checkDEV() {
-    __DEV__ ? tsInvariant.invariant("boolean" === typeof DEV, DEV) : tsInvariant.invariant("boolean" === typeof DEV, 36);
-}
-removeTemporaryGlobals();
-checkDEV();
-
-function isNonNullObject(obj) {
-    return obj !== null && typeof obj === 'object';
-}
-
-function deepFreeze(value) {
-    var workSet = new Set([value]);
-    workSet.forEach(function (obj) {
-        if (isNonNullObject(obj) && shallowFreeze(obj) === obj) {
-            Object.getOwnPropertyNames(obj).forEach(function (name) {
-                if (isNonNullObject(obj[name]))
-                    workSet.add(obj[name]);
-            });
-        }
-    });
-    return value;
-}
-function shallowFreeze(obj) {
-    if (__DEV__ && !Object.isFrozen(obj)) {
-        try {
-            Object.freeze(obj);
-        }
-        catch (e) {
-            if (e instanceof TypeError)
-                return null;
-            throw e;
-        }
-    }
-    return obj;
-}
-function maybeDeepFreeze(obj) {
-    if (__DEV__) {
-        deepFreeze(obj);
-    }
-    return obj;
-}
-
-var canUseWeakMap = typeof WeakMap === 'function' &&
-    maybe(function () { return navigator.product; }) !== 'ReactNative';
-var canUseWeakSet = typeof WeakSet === 'function';
-var canUseSymbol = typeof Symbol === 'function' &&
-    typeof Symbol.for === 'function';
-var canUseDOM = typeof maybe(function () { return window.document.createElement; }) === "function";
-var usingJSDOM = maybe(function () { return navigator.userAgent.indexOf("jsdom") >= 0; }) || false;
-var canUseLayoutEffect = canUseDOM && !usingJSDOM;
-
-function isNonEmptyArray(value) {
-    return Array.isArray(value) && value.length > 0;
-}
-
-function compact() {
-    var objects = [];
-    for (var _i = 0; _i < arguments.length; _i++) {
-        objects[_i] = arguments[_i];
-    }
-    var result = Object.create(null);
-    objects.forEach(function (obj) {
-        if (!obj)
-            return;
-        Object.keys(obj).forEach(function (key) {
-            var value = obj[key];
-            if (value !== void 0) {
-                result[key] = value;
-            }
-        });
-    });
-    return result;
-}
-
-function mergeOptions(defaults, options) {
-    return compact(defaults, options, options.variables && {
-        variables: tslib.__assign(tslib.__assign({}, (defaults && defaults.variables)), options.variables),
-    });
-}
-
-var contextKey = canUseSymbol
-    ? Symbol.for('__APOLLO_CONTEXT__')
-    : '__APOLLO_CONTEXT__';
-function getApolloContext() {
-    var context = React__namespace.createContext[contextKey];
-    if (!context) {
-        Object.defineProperty(React__namespace.createContext, contextKey, {
-            value: context = React__namespace.createContext({}),
-            enumerable: false,
-            writable: false,
-            configurable: true,
-        });
-        context.displayName = 'ApolloContext';
-    }
-    return context;
-}
-
 function useApolloClient(override) {
-    var context = React.useContext(getApolloContext());
-    var client = override || context.client;
-    __DEV__ ? tsInvariant.invariant(!!client, 'Could not find "client" in the context or passed in as an option. ' +
+    var context$1 = React.useContext(context.getApolloContext());
+    var client = override || context$1.client;
+    __DEV__ ? globals.invariant(!!client, 'Could not find "client" in the context or passed in as an option. ' +
         'Wrap the root component in an <ApolloProvider>, or pass an ApolloClient ' +
-        'instance in via options.') : tsInvariant.invariant(!!client, 29);
+        'instance in via options.') : globals.invariant(!!client, 29);
     return client;
 }
 
@@ -172,10 +44,10 @@ var useSyncExternalStore = realHook || (function (subscribe, getSnapshot, getSer
         !didWarnUncachedGetSnapshot &&
         value !== getSnapshot()) {
         didWarnUncachedGetSnapshot = true;
-        __DEV__ && tsInvariant.invariant.error('The result of getSnapshot should be cached to avoid an infinite loop');
+        __DEV__ && globals.invariant.error('The result of getSnapshot should be cached to avoid an infinite loop');
     }
     var _a = React__namespace.useState({ inst: { value: value, getSnapshot: getSnapshot } }), inst = _a[0].inst, forceUpdate = _a[1];
-    if (canUseLayoutEffect) {
+    if (utilities.canUseLayoutEffect) {
         React__namespace.useLayoutEffect(function () {
             Object.assign(inst, { value: value, getSnapshot: getSnapshot });
             if (checkIfSnapshotChanged(inst)) {
@@ -208,144 +80,6 @@ function checkIfSnapshotChanged(_a) {
     }
 }
 
-var generateErrorMessage = function (err) {
-    var message = '';
-    if (isNonEmptyArray(err.graphQLErrors) || isNonEmptyArray(err.clientErrors)) {
-        var errors = (err.graphQLErrors || [])
-            .concat(err.clientErrors || []);
-        errors.forEach(function (error) {
-            var errorMessage = error
-                ? error.message
-                : 'Error message not found.';
-            message += "".concat(errorMessage, "\n");
-        });
-    }
-    if (err.networkError) {
-        message += "".concat(err.networkError.message, "\n");
-    }
-    message = message.replace(/\n$/, '');
-    return message;
-};
-var ApolloError = (function (_super) {
-    tslib.__extends(ApolloError, _super);
-    function ApolloError(_a) {
-        var graphQLErrors = _a.graphQLErrors, clientErrors = _a.clientErrors, networkError = _a.networkError, errorMessage = _a.errorMessage, extraInfo = _a.extraInfo;
-        var _this = _super.call(this, errorMessage) || this;
-        _this.graphQLErrors = graphQLErrors || [];
-        _this.clientErrors = clientErrors || [];
-        _this.networkError = networkError || null;
-        _this.message = errorMessage || generateErrorMessage(_this);
-        _this.extraInfo = extraInfo;
-        _this.__proto__ = ApolloError.prototype;
-        return _this;
-    }
-    return ApolloError;
-}(Error));
-
-var NetworkStatus;
-(function (NetworkStatus) {
-    NetworkStatus[NetworkStatus["loading"] = 1] = "loading";
-    NetworkStatus[NetworkStatus["setVariables"] = 2] = "setVariables";
-    NetworkStatus[NetworkStatus["fetchMore"] = 3] = "fetchMore";
-    NetworkStatus[NetworkStatus["refetch"] = 4] = "refetch";
-    NetworkStatus[NetworkStatus["poll"] = 6] = "poll";
-    NetworkStatus[NetworkStatus["ready"] = 7] = "ready";
-    NetworkStatus[NetworkStatus["error"] = 8] = "error";
-})(NetworkStatus || (NetworkStatus = {}));
-
-var DocumentType;
-(function (DocumentType) {
-    DocumentType[DocumentType["Query"] = 0] = "Query";
-    DocumentType[DocumentType["Mutation"] = 1] = "Mutation";
-    DocumentType[DocumentType["Subscription"] = 2] = "Subscription";
-})(DocumentType || (DocumentType = {}));
-var cache = new Map();
-function operationName(type) {
-    var name;
-    switch (type) {
-        case DocumentType.Query:
-            name = 'Query';
-            break;
-        case DocumentType.Mutation:
-            name = 'Mutation';
-            break;
-        case DocumentType.Subscription:
-            name = 'Subscription';
-            break;
-    }
-    return name;
-}
-function parser(document) {
-    var cached = cache.get(document);
-    if (cached)
-        return cached;
-    var variables, type, name;
-    __DEV__ ? tsInvariant.invariant(!!document && !!document.kind, "Argument of ".concat(document, " passed to parser was not a valid GraphQL ") +
-        "DocumentNode. You may need to use 'graphql-tag' or another method " +
-        "to convert your operation into a document") : tsInvariant.invariant(!!document && !!document.kind, 30);
-    var fragments = [];
-    var queries = [];
-    var mutations = [];
-    var subscriptions = [];
-    for (var _i = 0, _a = document.definitions; _i < _a.length; _i++) {
-        var x = _a[_i];
-        if (x.kind === 'FragmentDefinition') {
-            fragments.push(x);
-            continue;
-        }
-        if (x.kind === 'OperationDefinition') {
-            switch (x.operation) {
-                case 'query':
-                    queries.push(x);
-                    break;
-                case 'mutation':
-                    mutations.push(x);
-                    break;
-                case 'subscription':
-                    subscriptions.push(x);
-                    break;
-            }
-        }
-    }
-    __DEV__ ? tsInvariant.invariant(!fragments.length ||
-        (queries.length || mutations.length || subscriptions.length), "Passing only a fragment to 'graphql' is not yet supported. " +
-        "You must include a query, subscription or mutation as well") : tsInvariant.invariant(!fragments.length ||
-        (queries.length || mutations.length || subscriptions.length), 31);
-    __DEV__ ? tsInvariant.invariant(queries.length + mutations.length + subscriptions.length <= 1, "react-apollo only supports a query, subscription, or a mutation per HOC. " +
-        "".concat(document, " had ").concat(queries.length, " queries, ").concat(subscriptions.length, " ") +
-        "subscriptions and ".concat(mutations.length, " mutations. ") +
-        "You can use 'compose' to join multiple operation types to a component") : tsInvariant.invariant(queries.length + mutations.length + subscriptions.length <= 1, 32);
-    type = queries.length ? DocumentType.Query : DocumentType.Mutation;
-    if (!queries.length && !mutations.length)
-        type = DocumentType.Subscription;
-    var definitions = queries.length
-        ? queries
-        : mutations.length
-            ? mutations
-            : subscriptions;
-    __DEV__ ? tsInvariant.invariant(definitions.length === 1, "react-apollo only supports one definition per HOC. ".concat(document, " had ") +
-        "".concat(definitions.length, " definitions. ") +
-        "You can use 'compose' to join multiple operation types to a component") : tsInvariant.invariant(definitions.length === 1, 33);
-    var definition = definitions[0];
-    variables = definition.variableDefinitions || [];
-    if (definition.name && definition.name.kind === 'Name') {
-        name = definition.name.value;
-    }
-    else {
-        name = 'data';
-    }
-    var payload = { name: name, type: type, variables: variables };
-    cache.set(document, payload);
-    return payload;
-}
-function verifyDocumentType(document, type) {
-    var operation = parser(document);
-    var requiredOperationName = operationName(type);
-    var usedOperationName = operationName(operation.type);
-    __DEV__ ? tsInvariant.invariant(operation.type === type, "Running a ".concat(requiredOperationName, " requires a graphql ") +
-        "".concat(requiredOperationName, ", but a ").concat(usedOperationName, " was used instead.")) : tsInvariant.invariant(operation.type === type, 34);
-}
-
 var hasOwnProperty = Object.prototype.hasOwnProperty;
 function useQuery(query, options) {
     if (options === void 0) { options = Object.create(null); }
@@ -370,21 +104,21 @@ var InternalState = (function () {
         this.client = client;
         this.query = query;
         this.asyncResolveFns = new Set();
-        this.optionsToIgnoreOnce = new (canUseWeakSet ? WeakSet : Set)();
-        this.ssrDisabledResult = maybeDeepFreeze({
+        this.optionsToIgnoreOnce = new (utilities.canUseWeakSet ? WeakSet : Set)();
+        this.ssrDisabledResult = utilities.maybeDeepFreeze({
             loading: true,
             data: void 0,
             error: void 0,
-            networkStatus: NetworkStatus.loading,
+            networkStatus: core.NetworkStatus.loading,
         });
-        this.skipStandbyResult = maybeDeepFreeze({
+        this.skipStandbyResult = utilities.maybeDeepFreeze({
             loading: false,
             data: void 0,
             error: void 0,
-            networkStatus: NetworkStatus.ready,
+            networkStatus: core.NetworkStatus.ready,
         });
-        this.toQueryResultCache = new (canUseWeakMap ? WeakMap : Map)();
-        verifyDocumentType(query, DocumentType.Query);
+        this.toQueryResultCache = new (utilities.canUseWeakMap ? WeakMap : Map)();
+        parser.verifyDocumentType(query, parser.DocumentType.Query);
         var previousResult = previous && previous.result;
         var previousData = previousResult && previousResult.data;
         if (previousData) {
@@ -392,7 +126,7 @@ var InternalState = (function () {
         }
     }
     InternalState.prototype.forceUpdate = function () {
-        __DEV__ && tsInvariant.invariant.warn("Calling default no-op implementation of InternalState#forceUpdate");
+        __DEV__ && globals.invariant.warn("Calling default no-op implementation of InternalState#forceUpdate");
     };
     InternalState.prototype.asyncUpdate = function () {
         var _this = this;
@@ -404,7 +138,7 @@ var InternalState = (function () {
     };
     InternalState.prototype.useQuery = function (options) {
         var _this = this;
-        this.renderPromises = React.useContext(getApolloContext()).renderPromises;
+        this.renderPromises = React.useContext(context.getApolloContext()).renderPromises;
         this.useOptions(options);
         var obsQuery = this.useObservableQuery();
         var result = useSyncExternalStore(React.useCallback(function () {
@@ -443,7 +177,7 @@ var InternalState = (function () {
                         data: (previousResult && previousResult.data),
                         error: error,
                         loading: false,
-                        networkStatus: NetworkStatus.error,
+                        networkStatus: core.NetworkStatus.error,
                     });
                 }
             };
@@ -500,8 +234,8 @@ var InternalState = (function () {
         if (this.queryHookOptions.defaultOptions) {
             toMerge.push(this.queryHookOptions.defaultOptions);
         }
-        toMerge.push(compact(this.observable && this.observable.options, this.watchQueryOptions));
-        return toMerge.reduce(mergeOptions);
+        toMerge.push(utilities.compact(this.observable && this.observable.options, this.watchQueryOptions));
+        return toMerge.reduce(core.mergeOptions);
     };
     InternalState.prototype.createWatchQueryOptions = function (_a) {
         var _b;
@@ -594,8 +328,8 @@ var InternalState = (function () {
             return queryResult;
         var data = result.data; result.partial; var resultWithoutPartial = tslib.__rest(result, ["data", "partial"]);
         this.toQueryResultCache.set(result, queryResult = tslib.__assign(tslib.__assign(tslib.__assign({ data: data }, resultWithoutPartial), this.obsQueryFields), { client: this.client, observable: this.observable, variables: this.observable.variables, called: !this.queryHookOptions.skip, previousData: this.previousData }));
-        if (!queryResult.error && isNonEmptyArray(result.errors)) {
-            queryResult.error = new ApolloError({ graphQLErrors: result.errors });
+        if (!queryResult.error && utilities.isNonEmptyArray(result.errors)) {
+            queryResult.error = new errors.ApolloError({ graphQLErrors: result.errors });
         }
         return queryResult;
     };
@@ -607,7 +341,7 @@ var InternalState = (function () {
             this.observable.options.fetchPolicy !== 'cache-only') {
             Object.assign(result, {
                 loading: true,
-                networkStatus: NetworkStatus.refetch,
+                networkStatus: core.NetworkStatus.refetch,
             });
             this.observable.refetch();
         }
@@ -627,7 +361,7 @@ function useLazyQuery(query, options) {
     var internalState = useInternalState(useApolloClient(options && options.client), query);
     var execOptionsRef = React.useRef();
     var merged = execOptionsRef.current
-        ? mergeOptions(options, execOptionsRef.current)
+        ? utilities.mergeOptions(options, execOptionsRef.current)
         : options;
     var useQueryResult = internalState.useQuery(tslib.__assign(tslib.__assign({}, merged), { skip: !execOptionsRef.current }));
     var initialFetchPolicy = useQueryResult.observable.options.initialFetchPolicy ||
@@ -669,7 +403,7 @@ function useLazyQuery(query, options) {
 
 function useMutation(mutation, options) {
     var client = useApolloClient(options === null || options === void 0 ? void 0 : options.client);
-    verifyDocumentType(mutation, DocumentType.Mutation);
+    parser.verifyDocumentType(mutation, parser.DocumentType.Mutation);
     var _a = React.useState({
         called: false,
         loading: false,
@@ -700,12 +434,12 @@ function useMutation(mutation, options) {
             });
         }
         var mutationId = ++ref.current.mutationId;
-        var clientOptions = mergeOptions(baseOptions, executeOptions);
+        var clientOptions = core.mergeOptions(baseOptions, executeOptions);
         return client.mutate(clientOptions).then(function (response) {
             var _a, _b, _c;
-            var data = response.data, errors = response.errors;
-            var error = errors && errors.length > 0
-                ? new ApolloError({ graphQLErrors: errors })
+            var data = response.data, errors$1 = response.errors;
+            var error = errors$1 && errors$1.length > 0
+                ? new errors.ApolloError({ graphQLErrors: errors$1 })
                 : void 0;
             if (mutationId === ref.current.mutationId &&
                 !clientOptions.ignoreResults) {
@@ -762,7 +496,7 @@ function useMutation(mutation, options) {
 
 function useSubscription(subscription, options) {
     var client = useApolloClient(options === null || options === void 0 ? void 0 : options.client);
-    verifyDocumentType(subscription, DocumentType.Subscription);
+    parser.verifyDocumentType(subscription, parser.DocumentType.Subscription);
     var _a = React.useState({
         loading: !(options === null || options === void 0 ? void 0 : options.skip),
         error: void 0,

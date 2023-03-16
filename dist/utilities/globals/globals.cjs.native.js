@@ -3,7 +3,7 @@
 Object.defineProperty(exports, '__esModule', { value: true });
 
 var tsInvariant = require('ts-invariant');
-var index_js = require('ts-invariant/process/index.js');
+var process$1 = require('ts-invariant/process');
 var graphql = require('graphql');
 
 function maybe(thunk) {
@@ -16,7 +16,8 @@ function maybe(thunk) {
 var global$1 = (maybe(function () { return globalThis; }) ||
     maybe(function () { return window; }) ||
     maybe(function () { return self; }) ||
-    maybe(function () { return global; }) || maybe(function () { return maybe.constructor("return this")(); }));
+    maybe(function () { return global; }) ||
+    maybe(function () { return maybe.constructor("return this")(); }));
 
 var __ = "__";
 var GLOBAL_KEY = [__, __].join("DEV");
@@ -37,7 +38,7 @@ function getDEV() {
 var DEV = getDEV();
 
 function removeTemporaryGlobals() {
-    return typeof graphql.Source === "function" ? index_js.remove() : index_js.remove();
+    return typeof graphql.Source === "function" ? process$1.remove() : process$1.remove();
 }
 
 function checkDEV() {

@@ -2,637 +2,17 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-var tsInvariant = require('ts-invariant');
-var index_js = require('ts-invariant/process/index.js');
-var graphql = require('graphql');
+var globals = require('../utilities/globals');
 var tslib = require('tslib');
 var optimism = require('optimism');
+var utilities = require('../utilities');
 var equality = require('@wry/equality');
 var trie = require('@wry/trie');
 var context = require('@wry/context');
 
-function maybe(thunk) {
-    try {
-        return thunk();
-    }
-    catch (_a) { }
-}
-
-var global$1 = (maybe(function () { return globalThis; }) ||
-    maybe(function () { return window; }) ||
-    maybe(function () { return self; }) ||
-    maybe(function () { return global; }) || maybe(function () { return maybe.constructor("return this")(); }));
-
-var __ = "__";
-var GLOBAL_KEY = [__, __].join("DEV");
-function getDEV() {
-    try {
-        return Boolean(__DEV__);
-    }
-    catch (_a) {
-        Object.defineProperty(global$1, GLOBAL_KEY, {
-            value: maybe(function () { return process.env.NODE_ENV; }) !== "production",
-            enumerable: false,
-            configurable: true,
-            writable: true,
-        });
-        return global$1[GLOBAL_KEY];
-    }
-}
-var DEV = getDEV();
-
-function removeTemporaryGlobals() {
-    return typeof graphql.Source === "function" ? index_js.remove() : index_js.remove();
-}
-
-function checkDEV() {
-    __DEV__ ? tsInvariant.invariant("boolean" === typeof DEV, DEV) : tsInvariant.invariant("boolean" === typeof DEV, 36);
-}
-removeTemporaryGlobals();
-checkDEV();
-
-function shouldInclude(_a, variables) {
-    var directives = _a.directives;
-    if (!directives || !directives.length) {
-        return true;
-    }
-    return getInclusionDirectives(directives).every(function (_a) {
-        var directive = _a.directive, ifArgument = _a.ifArgument;
-        var evaledValue = false;
-        if (ifArgument.value.kind === 'Variable') {
-            evaledValue = variables && variables[ifArgument.value.name.value];
-            __DEV__ ? tsInvariant.invariant(evaledValue !== void 0, "Invalid variable referenced in @".concat(directive.name.value, " directive.")) : tsInvariant.invariant(evaledValue !== void 0, 37);
-        }
-        else {
-            evaledValue = ifArgument.value.value;
-        }
-        return directive.name.value === 'skip' ? !evaledValue : evaledValue;
-    });
-}
-function isInclusionDirective(_a) {
-    var value = _a.name.value;
-    return value === 'skip' || value === 'include';
-}
-function getInclusionDirectives(directives) {
-    var result = [];
-    if (directives && directives.length) {
-        directives.forEach(function (directive) {
-            if (!isInclusionDirective(directive))
-                return;
-            var directiveArguments = directive.arguments;
-            var directiveName = directive.name.value;
-            __DEV__ ? tsInvariant.invariant(directiveArguments && directiveArguments.length === 1, "Incorrect number of arguments for the @".concat(directiveName, " directive.")) : tsInvariant.invariant(directiveArguments && directiveArguments.length === 1, 38);
-            var ifArgument = directiveArguments[0];
-            __DEV__ ? tsInvariant.invariant(ifArgument.name && ifArgument.name.value === 'if', "Invalid argument for the @".concat(directiveName, " directive.")) : tsInvariant.invariant(ifArgument.name && ifArgument.name.value === 'if', 39);
-            var ifValue = ifArgument.value;
-            __DEV__ ? tsInvariant.invariant(ifValue &&
-                (ifValue.kind === 'Variable' || ifValue.kind === 'BooleanValue'), "Argument for the @".concat(directiveName, " directive must be a variable or a boolean value.")) : tsInvariant.invariant(ifValue &&
-                (ifValue.kind === 'Variable' || ifValue.kind === 'BooleanValue'), 40);
-            result.push({ directive: directive, ifArgument: ifArgument });
-        });
-    }
-    return result;
-}
-
-function getFragmentQueryDocument(document, fragmentName) {
-    var actualFragmentName = fragmentName;
-    var fragments = [];
-    document.definitions.forEach(function (definition) {
-        if (definition.kind === 'OperationDefinition') {
-            throw __DEV__ ? new tsInvariant.InvariantError("Found a ".concat(definition.operation, " operation").concat(definition.name ? " named '".concat(definition.name.value, "'") : '', ". ") +
-                'No operations are allowed when using a fragment as a query. Only fragments are allowed.') : new tsInvariant.InvariantError(41);
-        }
-        if (definition.kind === 'FragmentDefinition') {
-            fragments.push(definition);
-        }
-    });
-    if (typeof actualFragmentName === 'undefined') {
-        __DEV__ ? tsInvariant.invariant(fragments.length === 1, "Found ".concat(fragments.length, " fragments. `fragmentName` must be provided when there is not exactly 1 fragment.")) : tsInvariant.invariant(fragments.length === 1, 42);
-        actualFragmentName = fragments[0].name.value;
-    }
-    var query = tslib.__assign(tslib.__assign({}, document), { definitions: tslib.__spreadArray([
-            {
-                kind: 'OperationDefinition',
-                operation: 'query',
-                selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                        {
-                            kind: 'FragmentSpread',
-                            name: {
-                                kind: 'Name',
-                                value: actualFragmentName,
-                            },
-                        },
-                    ],
-                },
-            }
-        ], document.definitions, true) });
-    return query;
-}
-function createFragmentMap(fragments) {
-    if (fragments === void 0) { fragments = []; }
-    var symTable = {};
-    fragments.forEach(function (fragment) {
-        symTable[fragment.name.value] = fragment;
-    });
-    return symTable;
-}
-function getFragmentFromSelection(selection, fragmentMap) {
-    switch (selection.kind) {
-        case 'InlineFragment':
-            return selection;
-        case 'FragmentSpread': {
-            var fragment = fragmentMap && fragmentMap[selection.name.value];
-            __DEV__ ? tsInvariant.invariant(fragment, "No fragment named ".concat(selection.name.value, ".")) : tsInvariant.invariant(fragment, 43);
-            return fragment;
-        }
-        default:
-            return null;
-    }
-}
-
-function isNonNullObject(obj) {
-    return obj !== null && typeof obj === 'object';
-}
-
-function makeReference(id) {
-    return { __ref: String(id) };
-}
-function isReference(obj) {
-    return Boolean(obj && typeof obj === 'object' && typeof obj.__ref === 'string');
-}
-function isStringValue(value) {
-    return value.kind === 'StringValue';
-}
-function isBooleanValue(value) {
-    return value.kind === 'BooleanValue';
-}
-function isIntValue(value) {
-    return value.kind === 'IntValue';
-}
-function isFloatValue(value) {
-    return value.kind === 'FloatValue';
-}
-function isVariable(value) {
-    return value.kind === 'Variable';
-}
-function isObjectValue(value) {
-    return value.kind === 'ObjectValue';
-}
-function isListValue(value) {
-    return value.kind === 'ListValue';
-}
-function isEnumValue(value) {
-    return value.kind === 'EnumValue';
-}
-function isNullValue(value) {
-    return value.kind === 'NullValue';
-}
-function valueToObjectRepresentation(argObj, name, value, variables) {
-    if (isIntValue(value) || isFloatValue(value)) {
-        argObj[name.value] = Number(value.value);
-    }
-    else if (isBooleanValue(value) || isStringValue(value)) {
-        argObj[name.value] = value.value;
-    }
-    else if (isObjectValue(value)) {
-        var nestedArgObj_1 = {};
-        value.fields.map(function (obj) {
-            return valueToObjectRepresentation(nestedArgObj_1, obj.name, obj.value, variables);
-        });
-        argObj[name.value] = nestedArgObj_1;
-    }
-    else if (isVariable(value)) {
-        var variableValue = (variables || {})[value.name.value];
-        argObj[name.value] = variableValue;
-    }
-    else if (isListValue(value)) {
-        argObj[name.value] = value.values.map(function (listValue) {
-            var nestedArgArrayObj = {};
-            valueToObjectRepresentation(nestedArgArrayObj, name, listValue, variables);
-            return nestedArgArrayObj[name.value];
-        });
-    }
-    else if (isEnumValue(value)) {
-        argObj[name.value] = value.value;
-    }
-    else if (isNullValue(value)) {
-        argObj[name.value] = null;
-    }
-    else {
-        throw __DEV__ ? new tsInvariant.InvariantError("The inline argument \"".concat(name.value, "\" of kind \"").concat(value.kind, "\"") +
-            'is not supported. Use variables instead of inline arguments to ' +
-            'overcome this limitation.') : new tsInvariant.InvariantError(52);
-    }
-}
-function storeKeyNameFromField(field, variables) {
-    var directivesObj = null;
-    if (field.directives) {
-        directivesObj = {};
-        field.directives.forEach(function (directive) {
-            directivesObj[directive.name.value] = {};
-            if (directive.arguments) {
-                directive.arguments.forEach(function (_a) {
-                    var name = _a.name, value = _a.value;
-                    return valueToObjectRepresentation(directivesObj[directive.name.value], name, value, variables);
-                });
-            }
-        });
-    }
-    var argObj = null;
-    if (field.arguments && field.arguments.length) {
-        argObj = {};
-        field.arguments.forEach(function (_a) {
-            var name = _a.name, value = _a.value;
-            return valueToObjectRepresentation(argObj, name, value, variables);
-        });
-    }
-    return getStoreKeyName(field.name.value, argObj, directivesObj);
-}
-var KNOWN_DIRECTIVES = [
-    'connection',
-    'include',
-    'skip',
-    'client',
-    'rest',
-    'export',
-];
-var getStoreKeyName = Object.assign(function (fieldName, args, directives) {
-    if (args &&
-        directives &&
-        directives['connection'] &&
-        directives['connection']['key']) {
-        if (directives['connection']['filter'] &&
-            directives['connection']['filter'].length > 0) {
-            var filterKeys = directives['connection']['filter']
-                ? directives['connection']['filter']
-                : [];
-            filterKeys.sort();
-            var filteredArgs_1 = {};
-            filterKeys.forEach(function (key) {
-                filteredArgs_1[key] = args[key];
-            });
-            return "".concat(directives['connection']['key'], "(").concat(stringify(filteredArgs_1), ")");
-        }
-        else {
-            return directives['connection']['key'];
-        }
-    }
-    var completeFieldName = fieldName;
-    if (args) {
-        var stringifiedArgs = stringify(args);
-        completeFieldName += "(".concat(stringifiedArgs, ")");
-    }
-    if (directives) {
-        Object.keys(directives).forEach(function (key) {
-            if (KNOWN_DIRECTIVES.indexOf(key) !== -1)
-                return;
-            if (directives[key] && Object.keys(directives[key]).length) {
-                completeFieldName += "@".concat(key, "(").concat(stringify(directives[key]), ")");
-            }
-            else {
-                completeFieldName += "@".concat(key);
-            }
-        });
-    }
-    return completeFieldName;
-}, {
-    setStringify: function (s) {
-        var previous = stringify;
-        stringify = s;
-        return previous;
-    },
-});
-var stringify = function defaultStringify(value) {
-    return JSON.stringify(value, stringifyReplacer);
-};
-function stringifyReplacer(_key, value) {
-    if (isNonNullObject(value) && !Array.isArray(value)) {
-        value = Object.keys(value).sort().reduce(function (copy, key) {
-            copy[key] = value[key];
-            return copy;
-        }, {});
-    }
-    return value;
-}
-function argumentsObjectFromField(field, variables) {
-    if (field.arguments && field.arguments.length) {
-        var argObj_1 = {};
-        field.arguments.forEach(function (_a) {
-            var name = _a.name, value = _a.value;
-            return valueToObjectRepresentation(argObj_1, name, value, variables);
-        });
-        return argObj_1;
-    }
-    return null;
-}
-function resultKeyNameFromField(field) {
-    return field.alias ? field.alias.value : field.name.value;
-}
-function getTypenameFromResult(result, selectionSet, fragmentMap) {
-    if (typeof result.__typename === 'string') {
-        return result.__typename;
-    }
-    for (var _i = 0, _a = selectionSet.selections; _i < _a.length; _i++) {
-        var selection = _a[_i];
-        if (isField(selection)) {
-            if (selection.name.value === '__typename') {
-                return result[resultKeyNameFromField(selection)];
-            }
-        }
-        else {
-            var typename = getTypenameFromResult(result, getFragmentFromSelection(selection, fragmentMap).selectionSet, fragmentMap);
-            if (typeof typename === 'string') {
-                return typename;
-            }
-        }
-    }
-}
-function isField(selection) {
-    return selection.kind === 'Field';
-}
-
-function checkDocument(doc) {
-    __DEV__ ? tsInvariant.invariant(doc && doc.kind === 'Document', "Expecting a parsed GraphQL document. Perhaps you need to wrap the query string in a \"gql\" tag? http://docs.apollostack.com/apollo-client/core.html#gql") : tsInvariant.invariant(doc && doc.kind === 'Document', 44);
-    var operations = doc.definitions
-        .filter(function (d) { return d.kind !== 'FragmentDefinition'; })
-        .map(function (definition) {
-        if (definition.kind !== 'OperationDefinition') {
-            throw __DEV__ ? new tsInvariant.InvariantError("Schema type definitions not allowed in queries. Found: \"".concat(definition.kind, "\"")) : new tsInvariant.InvariantError(45);
-        }
-        return definition;
-    });
-    __DEV__ ? tsInvariant.invariant(operations.length <= 1, "Ambiguous GraphQL document: contains ".concat(operations.length, " operations")) : tsInvariant.invariant(operations.length <= 1, 46);
-    return doc;
-}
-function getOperationDefinition(doc) {
-    checkDocument(doc);
-    return doc.definitions.filter(function (definition) { return definition.kind === 'OperationDefinition'; })[0];
-}
-function getFragmentDefinitions(doc) {
-    return doc.definitions.filter(function (definition) { return definition.kind === 'FragmentDefinition'; });
-}
-function getQueryDefinition(doc) {
-    var queryDef = getOperationDefinition(doc);
-    __DEV__ ? tsInvariant.invariant(queryDef && queryDef.operation === 'query', 'Must contain a query definition.') : tsInvariant.invariant(queryDef && queryDef.operation === 'query', 47);
-    return queryDef;
-}
-function getMainDefinition(queryDoc) {
-    checkDocument(queryDoc);
-    var fragmentDefinition;
-    for (var _i = 0, _a = queryDoc.definitions; _i < _a.length; _i++) {
-        var definition = _a[_i];
-        if (definition.kind === 'OperationDefinition') {
-            var operation = definition.operation;
-            if (operation === 'query' ||
-                operation === 'mutation' ||
-                operation === 'subscription') {
-                return definition;
-            }
-        }
-        if (definition.kind === 'FragmentDefinition' && !fragmentDefinition) {
-            fragmentDefinition = definition;
-        }
-    }
-    if (fragmentDefinition) {
-        return fragmentDefinition;
-    }
-    throw __DEV__ ? new tsInvariant.InvariantError('Expected a parsed GraphQL query with a query, mutation, subscription, or a fragment.') : new tsInvariant.InvariantError(51);
-}
-function getDefaultValues(definition) {
-    var defaultValues = Object.create(null);
-    var defs = definition && definition.variableDefinitions;
-    if (defs && defs.length) {
-        defs.forEach(function (def) {
-            if (def.defaultValue) {
-                valueToObjectRepresentation(defaultValues, def.variable.name, def.defaultValue);
-            }
-        });
-    }
-    return defaultValues;
-}
-
-var TYPENAME_FIELD = {
-    kind: 'Field',
-    name: {
-        kind: 'Name',
-        value: '__typename',
-    },
-};
-var addTypenameToDocument = Object.assign(function (doc) {
-    return graphql.visit(doc, {
-        SelectionSet: {
-            enter: function (node, _key, parent) {
-                if (parent &&
-                    parent.kind === 'OperationDefinition') {
-                    return;
-                }
-                var selections = node.selections;
-                if (!selections) {
-                    return;
-                }
-                var skip = selections.some(function (selection) {
-                    return (isField(selection) &&
-                        (selection.name.value === '__typename' ||
-                            selection.name.value.lastIndexOf('__', 0) === 0));
-                });
-                if (skip) {
-                    return;
-                }
-                var field = parent;
-                if (isField(field) &&
-                    field.directives &&
-                    field.directives.some(function (d) { return d.name.value === 'export'; })) {
-                    return;
-                }
-                return tslib.__assign(tslib.__assign({}, node), { selections: tslib.__spreadArray(tslib.__spreadArray([], selections, true), [TYPENAME_FIELD], false) });
-            },
-        },
-    });
-}, {
-    added: function (field) {
-        return field === TYPENAME_FIELD;
-    },
-});
-
-var hasOwnProperty = Object.prototype.hasOwnProperty;
-function mergeDeepArray(sources) {
-    var target = sources[0] || {};
-    var count = sources.length;
-    if (count > 1) {
-        var merger = new DeepMerger();
-        for (var i = 1; i < count; ++i) {
-            target = merger.merge(target, sources[i]);
-        }
-    }
-    return target;
-}
-var defaultReconciler = function (target, source, property) {
-    return this.merge(target[property], source[property]);
-};
-var DeepMerger = (function () {
-    function DeepMerger(reconciler) {
-        if (reconciler === void 0) { reconciler = defaultReconciler; }
-        this.reconciler = reconciler;
-        this.isObject = isNonNullObject;
-        this.pastCopies = new Set();
-    }
-    DeepMerger.prototype.merge = function (target, source) {
-        var _this = this;
-        var context = [];
-        for (var _i = 2; _i < arguments.length; _i++) {
-            context[_i - 2] = arguments[_i];
-        }
-        if (isNonNullObject(source) && isNonNullObject(target)) {
-            Object.keys(source).forEach(function (sourceKey) {
-                if (hasOwnProperty.call(target, sourceKey)) {
-                    var targetValue = target[sourceKey];
-                    if (source[sourceKey] !== targetValue) {
-                        var result = _this.reconciler.apply(_this, tslib.__spreadArray([target, source, sourceKey], context, false));
-                        if (result !== targetValue) {
-                            target = _this.shallowCopyForMerge(target);
-                            target[sourceKey] = result;
-                        }
-                    }
-                }
-                else {
-                    target = _this.shallowCopyForMerge(target);
-                    target[sourceKey] = source[sourceKey];
-                }
-            });
-            return target;
-        }
-        return source;
-    };
-    DeepMerger.prototype.shallowCopyForMerge = function (value) {
-        if (isNonNullObject(value)) {
-            if (!this.pastCopies.has(value)) {
-                if (Array.isArray(value)) {
-                    value = value.slice(0);
-                }
-                else {
-                    value = tslib.__assign({ __proto__: Object.getPrototypeOf(value) }, value);
-                }
-                this.pastCopies.add(value);
-            }
-        }
-        return value;
-    };
-    return DeepMerger;
-}());
-
-var toString = Object.prototype.toString;
-function cloneDeep(value) {
-    return cloneDeepHelper(value);
-}
-function cloneDeepHelper(val, seen) {
-    switch (toString.call(val)) {
-        case "[object Array]": {
-            seen = seen || new Map;
-            if (seen.has(val))
-                return seen.get(val);
-            var copy_1 = val.slice(0);
-            seen.set(val, copy_1);
-            copy_1.forEach(function (child, i) {
-                copy_1[i] = cloneDeepHelper(child, seen);
-            });
-            return copy_1;
-        }
-        case "[object Object]": {
-            seen = seen || new Map;
-            if (seen.has(val))
-                return seen.get(val);
-            var copy_2 = Object.create(Object.getPrototypeOf(val));
-            seen.set(val, copy_2);
-            Object.keys(val).forEach(function (key) {
-                copy_2[key] = cloneDeepHelper(val[key], seen);
-            });
-            return copy_2;
-        }
-        default:
-            return val;
-    }
-}
-
-function deepFreeze(value) {
-    var workSet = new Set([value]);
-    workSet.forEach(function (obj) {
-        if (isNonNullObject(obj) && shallowFreeze(obj) === obj) {
-            Object.getOwnPropertyNames(obj).forEach(function (name) {
-                if (isNonNullObject(obj[name]))
-                    workSet.add(obj[name]);
-            });
-        }
-    });
-    return value;
-}
-function shallowFreeze(obj) {
-    if (__DEV__ && !Object.isFrozen(obj)) {
-        try {
-            Object.freeze(obj);
-        }
-        catch (e) {
-            if (e instanceof TypeError)
-                return null;
-            throw e;
-        }
-    }
-    return obj;
-}
-function maybeDeepFreeze(obj) {
-    if (__DEV__) {
-        deepFreeze(obj);
-    }
-    return obj;
-}
-
-var canUseWeakMap = typeof WeakMap === 'function' &&
-    maybe(function () { return navigator.product; }) !== 'ReactNative';
-var canUseWeakSet = typeof WeakSet === 'function';
-typeof maybe(function () { return window.document.createElement; }) === "function";
-maybe(function () { return navigator.userAgent.indexOf("jsdom") >= 0; }) || false;
-
-function isNonEmptyArray(value) {
-    return Array.isArray(value) && value.length > 0;
-}
-
-function compact() {
-    var objects = [];
-    for (var _i = 0; _i < arguments.length; _i++) {
-        objects[_i] = arguments[_i];
-    }
-    var result = Object.create(null);
-    objects.forEach(function (obj) {
-        if (!obj)
-            return;
-        Object.keys(obj).forEach(function (key) {
-            var value = obj[key];
-            if (value !== void 0) {
-                result[key] = value;
-            }
-        });
-    });
-    return result;
-}
-
-var prefixCounts = new Map();
-function makeUniqueId(prefix) {
-    var count = prefixCounts.get(prefix) || 1;
-    prefixCounts.set(prefix, count + 1);
-    return "".concat(prefix, ":").concat(count, ":").concat(Math.random().toString(36).slice(2));
-}
-
-function stringifyForDisplay(value) {
-    var undefId = makeUniqueId("stringifyForDisplay");
-    return JSON.stringify(value, function (key, value) {
-        return value === void 0 ? undefId : value;
-    }).split(JSON.stringify(undefId)).join("<undefined>");
-}
-
 var ApolloCache = (function () {
     function ApolloCache() {
-        this.getFragmentDoc = optimism.wrap(getFragmentQueryDocument);
+        this.getFragmentDoc = optimism.wrap(utilities.getFragmentQueryDocument);
     }
     ApolloCache.prototype.batch = function (options) {
         var _this = this;
@@ -753,14 +133,14 @@ var defaultConfig = {
     canonizeResults: false,
 };
 function normalizeConfig(config) {
-    return compact(defaultConfig, config);
+    return utilities.compact(defaultConfig, config);
 }
 function shouldCanonizeResults(config) {
     var value = config.canonizeResults;
     return value === void 0 ? defaultConfig.canonizeResults : value;
 }
 function getTypenameFromStoreObject(store, objectOrReference) {
-    return isReference(objectOrReference)
+    return utilities.isReference(objectOrReference)
         ? store.get(objectOrReference.__ref, "__typename")
         : objectOrReference && objectOrReference.__typename;
 }
@@ -770,12 +150,12 @@ function fieldNameFromStoreName(storeFieldName) {
     return match ? match[0] : storeFieldName;
 }
 function selectionSetMatchesResult(selectionSet, result, variables) {
-    if (isNonNullObject(result)) {
+    if (utilities.isNonNullObject(result)) {
         return isArray(result)
             ? result.every(function (item) { return selectionSetMatchesResult(selectionSet, item, variables); })
             : selectionSet.selections.every(function (field) {
-                if (isField(field) && shouldInclude(field, variables)) {
-                    var key = resultKeyNameFromField(field);
+                if (utilities.isField(field) && utilities.shouldInclude(field, variables)) {
+                    var key = utilities.resultKeyNameFromField(field);
                     return hasOwn.call(result, key) &&
                         (!field.selectionSet ||
                             selectionSetMatchesResult(field.selectionSet, result[key], variables));
@@ -786,12 +166,12 @@ function selectionSetMatchesResult(selectionSet, result, variables) {
     return false;
 }
 function storeValueIsStoreObject(value) {
-    return isNonNullObject(value) &&
-        !isReference(value) &&
+    return utilities.isNonNullObject(value) &&
+        !utilities.isReference(value) &&
         !isArray(value);
 }
 function makeProcessedFieldsMerger() {
-    return new DeepMerger;
+    return new utilities.DeepMerger;
 }
 var isArray = function (a) { return Array.isArray(a); };
 
@@ -806,24 +186,24 @@ exports.EntityStore = (function () {
         this.data = Object.create(null);
         this.rootIds = Object.create(null);
         this.refs = Object.create(null);
-        this.getFieldValue = function (objectOrReference, storeFieldName) { return maybeDeepFreeze(isReference(objectOrReference)
+        this.getFieldValue = function (objectOrReference, storeFieldName) { return utilities.maybeDeepFreeze(utilities.isReference(objectOrReference)
             ? _this.get(objectOrReference.__ref, storeFieldName)
             : objectOrReference && objectOrReference[storeFieldName]); };
         this.canRead = function (objOrRef) {
-            return isReference(objOrRef)
+            return utilities.isReference(objOrRef)
                 ? _this.has(objOrRef.__ref)
                 : typeof objOrRef === "object";
         };
         this.toReference = function (objOrIdOrRef, mergeIntoStore) {
             if (typeof objOrIdOrRef === "string") {
-                return makeReference(objOrIdOrRef);
+                return utilities.makeReference(objOrIdOrRef);
             }
-            if (isReference(objOrIdOrRef)) {
+            if (utilities.isReference(objOrIdOrRef)) {
                 return objOrIdOrRef;
             }
             var id = _this.policies.identify(objOrIdOrRef)[0];
             if (id) {
-                var ref = makeReference(id);
+                var ref = utilities.makeReference(id);
                 if (mergeIntoStore) {
                     _this.merge(id, objOrIdOrRef);
                 }
@@ -869,9 +249,9 @@ exports.EntityStore = (function () {
     EntityStore.prototype.merge = function (older, newer) {
         var _this = this;
         var dataId;
-        if (isReference(older))
+        if (utilities.isReference(older))
             older = older.__ref;
-        if (isReference(newer))
+        if (utilities.isReference(newer))
             newer = newer.__ref;
         var existing = typeof older === "string"
             ? this.lookup(dataId = older)
@@ -881,8 +261,8 @@ exports.EntityStore = (function () {
             : newer;
         if (!incoming)
             return;
-        __DEV__ ? tsInvariant.invariant(typeof dataId === "string", "store.merge expects a string ID") : tsInvariant.invariant(typeof dataId === "string", 1);
-        var merged = new DeepMerger(storeObjectReconciler).merge(existing, incoming);
+        __DEV__ ? globals.invariant(typeof dataId === "string", "store.merge expects a string ID") : globals.invariant(typeof dataId === "string", 1);
+        var merged = new utilities.DeepMerger(storeObjectReconciler).merge(existing, incoming);
         this.data[dataId] = merged;
         if (merged !== existing) {
             delete this.refs[dataId];
@@ -922,12 +302,12 @@ exports.EntityStore = (function () {
             var sharedDetails_1 = {
                 DELETE: DELETE,
                 INVALIDATE: INVALIDATE,
-                isReference: isReference,
+                isReference: utilities.isReference,
                 toReference: this.toReference,
                 canRead: this.canRead,
                 readField: function (fieldNameOrOptions, from) { return _this.policies.readField(typeof fieldNameOrOptions === "string" ? {
                     fieldName: fieldNameOrOptions,
-                    from: from || makeReference(dataId),
+                    from: from || utilities.makeReference(dataId),
                 } : fieldNameOrOptions, { store: _this }); },
             };
             Object.keys(storeObject).forEach(function (storeFieldName) {
@@ -940,7 +320,7 @@ exports.EntityStore = (function () {
                     : fields[storeFieldName] || fields[fieldName];
                 if (modify) {
                     var newValue = modify === delModifier ? DELETE :
-                        modify(maybeDeepFreeze(fieldValue), tslib.__assign(tslib.__assign({}, sharedDetails_1), { fieldName: fieldName, storeFieldName: storeFieldName, storage: _this.getStorage(dataId, storeFieldName) }));
+                        modify(utilities.maybeDeepFreeze(fieldValue), tslib.__assign(tslib.__assign({}, sharedDetails_1), { fieldName: fieldName, storeFieldName: storeFieldName, storage: _this.getStorage(dataId, storeFieldName) }));
                     if (newValue === INVALIDATE) {
                         _this.group.dirty(dataId, storeFieldName);
                     }
@@ -1087,13 +467,13 @@ exports.EntityStore = (function () {
                 return found_1;
             var workSet_1 = new Set([root]);
             workSet_1.forEach(function (obj) {
-                if (isReference(obj)) {
+                if (utilities.isReference(obj)) {
                     found_1[obj.__ref] = true;
                 }
-                if (isNonNullObject(obj)) {
+                if (utilities.isNonNullObject(obj)) {
                     Object.keys(obj).forEach(function (key) {
                         var child = obj[key];
-                        if (isNonNullObject(child)) {
+                        if (utilities.isNonNullObject(child)) {
                             workSet_1.add(child);
                         }
                     });
@@ -1117,7 +497,7 @@ var CacheGroup = (function () {
     }
     CacheGroup.prototype.resetCaching = function () {
         this.d = this.caching ? optimism.dep() : null;
-        this.keyMaker = new trie.Trie(canUseWeakMap);
+        this.keyMaker = new trie.Trie(utilities.canUseWeakMap);
     };
     CacheGroup.prototype.depend = function (dataId, storeFieldName) {
         if (this.d) {
@@ -1153,7 +533,7 @@ function maybeDependOnExistenceOfEntity(store, entityId) {
             var policies = _a.policies, _b = _a.resultCaching, resultCaching = _b === void 0 ? true : _b, seed = _a.seed;
             var _this = _super.call(this, policies, new CacheGroup(resultCaching)) || this;
             _this.stump = new Stump(_this);
-            _this.storageTrie = new trie.Trie(canUseWeakMap);
+            _this.storageTrie = new trie.Trie(utilities.canUseWeakMap);
             if (seed)
                 _this.replace(seed);
             return _this;
@@ -1255,7 +635,7 @@ function supportsResultCaching(store) {
 }
 
 function shallowCopy(value) {
-    if (isNonNullObject(value)) {
+    if (utilities.isNonNullObject(value)) {
         return isArray(value)
             ? value.slice(0)
             : tslib.__assign({ __proto__: Object.getPrototypeOf(value) }, value);
@@ -1264,17 +644,17 @@ function shallowCopy(value) {
 }
 var ObjectCanon = (function () {
     function ObjectCanon() {
-        this.known = new (canUseWeakSet ? WeakSet : Set)();
-        this.pool = new trie.Trie(canUseWeakMap);
+        this.known = new (utilities.canUseWeakSet ? WeakSet : Set)();
+        this.pool = new trie.Trie(utilities.canUseWeakMap);
         this.passes = new WeakMap();
         this.keysByJSON = new Map();
         this.empty = this.admit({});
     }
     ObjectCanon.prototype.isKnown = function (value) {
-        return isNonNullObject(value) && this.known.has(value);
+        return utilities.isNonNullObject(value) && this.known.has(value);
     };
     ObjectCanon.prototype.pass = function (value) {
-        if (isNonNullObject(value)) {
+        if (utilities.isNonNullObject(value)) {
             var copy = shallowCopy(value);
             this.passes.set(copy, value);
             return copy;
@@ -1283,7 +663,7 @@ var ObjectCanon = (function () {
     };
     ObjectCanon.prototype.admit = function (value) {
         var _this = this;
-        if (isNonNullObject(value)) {
+        if (utilities.isNonNullObject(value)) {
             var original = this.passes.get(value);
             if (original)
                 return original;
@@ -1346,7 +726,7 @@ var ObjectCanon = (function () {
     return ObjectCanon;
 }());
 var canonicalStringify = Object.assign(function (value) {
-    if (isNonNullObject(value)) {
+    if (utilities.isNonNullObject(value)) {
         if (stringifyCanon === void 0) {
             resetCanonicalStringify();
         }
@@ -1365,7 +745,7 @@ var stringifyCanon;
 var stringifyCache;
 function resetCanonicalStringify() {
     stringifyCanon = new ObjectCanon;
-    stringifyCache = new (canUseWeakMap ? WeakMap : Map)();
+    stringifyCache = new (utilities.canUseWeakMap ? WeakMap : Map)();
 }
 
 function execSelectionSetKeyArgs(options) {
@@ -1379,8 +759,8 @@ function execSelectionSetKeyArgs(options) {
 var StoreReader = (function () {
     function StoreReader(config) {
         var _this = this;
-        this.knownResults = new (canUseWeakMap ? WeakMap : Map)();
-        this.config = compact(config, {
+        this.knownResults = new (utilities.canUseWeakMap ? WeakMap : Map)();
+        this.config = utilities.compact(config, {
             addTypename: config.addTypename !== false,
             canonizeResults: shouldCanonizeResults(config),
         });
@@ -1404,7 +784,7 @@ var StoreReader = (function () {
             keyArgs: execSelectionSetKeyArgs,
             makeCacheKey: function (selectionSet, parent, context, canonizeResults) {
                 if (supportsResultCaching(context.store)) {
-                    return context.store.makeCacheKey(selectionSet, isReference(parent) ? parent.__ref : parent, context.varString, canonizeResults);
+                    return context.store.makeCacheKey(selectionSet, utilities.isReference(parent) ? parent.__ref : parent, context.varString, canonizeResults);
                 }
             }
         });
@@ -1427,10 +807,10 @@ var StoreReader = (function () {
     StoreReader.prototype.diffQueryAgainstStore = function (_a) {
         var store = _a.store, query = _a.query, _b = _a.rootId, rootId = _b === void 0 ? 'ROOT_QUERY' : _b, variables = _a.variables, _c = _a.returnPartialData, returnPartialData = _c === void 0 ? true : _c, _d = _a.canonizeResults, canonizeResults = _d === void 0 ? this.config.canonizeResults : _d;
         var policies = this.config.cache.policies;
-        variables = tslib.__assign(tslib.__assign({}, getDefaultValues(getQueryDefinition(query))), variables);
-        var rootRef = makeReference(rootId);
+        variables = tslib.__assign(tslib.__assign({}, utilities.getDefaultValues(utilities.getQueryDefinition(query))), variables);
+        var rootRef = utilities.makeReference(rootId);
         var execResult = this.executeSelectionSet({
-            selectionSet: getMainDefinition(query).selectionSet,
+            selectionSet: utilities.getMainDefinition(query).selectionSet,
             objectOrReference: rootRef,
             enclosingRef: rootRef,
             context: {
@@ -1440,7 +820,7 @@ var StoreReader = (function () {
                 variables: variables,
                 varString: canonicalStringify(variables),
                 canonizeResults: canonizeResults,
-                fragmentMap: createFragmentMap(getFragmentDefinitions(query)),
+                fragmentMap: utilities.createFragmentMap(utilities.getFragmentDefinitions(query)),
             },
         });
         var missing;
@@ -1469,7 +849,7 @@ var StoreReader = (function () {
     StoreReader.prototype.execSelectionSetImpl = function (_a) {
         var _this = this;
         var selectionSet = _a.selectionSet, objectOrReference = _a.objectOrReference, enclosingRef = _a.enclosingRef, context = _a.context;
-        if (isReference(objectOrReference) &&
+        if (utilities.isReference(objectOrReference) &&
             !context.policies.rootTypenamesById[objectOrReference.__ref] &&
             !context.store.has(objectOrReference.__ref)) {
             return {
@@ -1481,7 +861,7 @@ var StoreReader = (function () {
         var typename = store.getFieldValue(objectOrReference, "__typename");
         var objectsToMerge = [];
         var missing;
-        var missingMerger = new DeepMerger();
+        var missingMerger = new utilities.DeepMerger();
         if (this.config.addTypename &&
             typeof typename === "string" &&
             !policies.rootIdsByTypename[typename]) {
@@ -1497,20 +877,20 @@ var StoreReader = (function () {
         var workSet = new Set(selectionSet.selections);
         workSet.forEach(function (selection) {
             var _a, _b;
-            if (!shouldInclude(selection, variables))
+            if (!utilities.shouldInclude(selection, variables))
                 return;
-            if (isField(selection)) {
+            if (utilities.isField(selection)) {
                 var fieldValue = policies.readField({
                     fieldName: selection.name.value,
                     field: selection,
                     variables: context.variables,
                     from: objectOrReference,
                 }, context);
-                var resultName = resultKeyNameFromField(selection);
+                var resultName = utilities.resultKeyNameFromField(selection);
                 if (fieldValue === void 0) {
-                    if (!addTypenameToDocument.added(selection)) {
+                    if (!utilities.addTypenameToDocument.added(selection)) {
                         missing = missingMerger.merge(missing, (_a = {},
-                            _a[resultName] = "Can't find field '".concat(selection.name.value, "' on ").concat(isReference(objectOrReference)
+                            _a[resultName] = "Can't find field '".concat(selection.name.value, "' on ").concat(utilities.isReference(objectOrReference)
                                 ? objectOrReference.__ref + " object"
                                 : "object " + JSON.stringify(objectOrReference, null, 2)),
                             _a));
@@ -1533,7 +913,7 @@ var StoreReader = (function () {
                     fieldValue = handleMissing(_this.executeSelectionSet({
                         selectionSet: selection.selectionSet,
                         objectOrReference: fieldValue,
-                        enclosingRef: isReference(fieldValue) ? fieldValue : enclosingRef,
+                        enclosingRef: utilities.isReference(fieldValue) ? fieldValue : enclosingRef,
                         context: context,
                     }), resultName);
                 }
@@ -1542,17 +922,17 @@ var StoreReader = (function () {
                 }
             }
             else {
-                var fragment = getFragmentFromSelection(selection, context.fragmentMap);
+                var fragment = utilities.getFragmentFromSelection(selection, context.fragmentMap);
                 if (fragment && policies.fragmentMatches(fragment, typename)) {
                     fragment.selectionSet.selections.forEach(workSet.add, workSet);
                 }
             }
         });
-        var result = mergeDeepArray(objectsToMerge);
+        var result = utilities.mergeDeepArray(objectsToMerge);
         var finalResult = { result: result, missing: missing };
         var frozen = context.canonizeResults
             ? this.canon.admit(finalResult)
-            : maybeDeepFreeze(finalResult);
+            : utilities.maybeDeepFreeze(finalResult);
         if (frozen.result) {
             this.knownResults.set(frozen.result, selectionSet);
         }
@@ -1562,7 +942,7 @@ var StoreReader = (function () {
         var _this = this;
         var field = _a.field, array = _a.array, enclosingRef = _a.enclosingRef, context = _a.context;
         var missing;
-        var missingMerger = new DeepMerger();
+        var missingMerger = new utilities.DeepMerger();
         function handleMissing(childResult, i) {
             var _a;
             if (childResult.missing) {
@@ -1589,7 +969,7 @@ var StoreReader = (function () {
                 return handleMissing(_this.executeSelectionSet({
                     selectionSet: field.selectionSet,
                     objectOrReference: item,
-                    enclosingRef: isReference(item) ? item : enclosingRef,
+                    enclosingRef: utilities.isReference(item) ? item : enclosingRef,
                     context: context,
                 }), i);
             }
@@ -1621,8 +1001,8 @@ function assertSelectionSetForIdValue(store, field, fieldValue) {
     if (!field.selectionSet) {
         var workSet_1 = new Set([fieldValue]);
         workSet_1.forEach(function (value) {
-            if (isNonNullObject(value)) {
-                __DEV__ ? tsInvariant.invariant(!isReference(value), "Missing selection set for object of type ".concat(getTypenameFromStoreObject(store, value), " returned for query field ").concat(field.name.value)) : tsInvariant.invariant(!isReference(value), 5);
+            if (utilities.isNonNullObject(value)) {
+                __DEV__ ? globals.invariant(!utilities.isReference(value), "Missing selection set for object of type ".concat(getTypenameFromStoreObject(store, value), " returned for query field ").concat(field.name.value)) : globals.invariant(!utilities.isReference(value), 5);
                 Object.values(value).forEach(workSet_1.add, workSet_1);
             }
         });
@@ -1709,7 +1089,7 @@ function keyFieldsFnFromSpecifier(specifier) {
                 hasOwn.call(object, schemaKeyPath[0])) {
                 extracted = extractKeyPath(object, schemaKeyPath, extractKey);
             }
-            __DEV__ ? tsInvariant.invariant(extracted !== void 0, "Missing field '".concat(schemaKeyPath.join('.'), "' while extracting keyFields from ").concat(JSON.stringify(object))) : tsInvariant.invariant(extracted !== void 0, 2);
+            __DEV__ ? globals.invariant(extracted !== void 0, "Missing field '".concat(schemaKeyPath.join('.'), "' while extracting keyFields from ").concat(JSON.stringify(object))) : globals.invariant(extracted !== void 0, 2);
             return extracted;
         });
         return "".concat(context.typename, ":").concat(JSON.stringify(keyObject));
@@ -1723,10 +1103,10 @@ function keyArgsFnFromSpecifier(specifier) {
             var firstKey = keyPath[0];
             var firstChar = firstKey.charAt(0);
             if (firstChar === "@") {
-                if (field && isNonEmptyArray(field.directives)) {
+                if (field && utilities.isNonEmptyArray(field.directives)) {
                     var directiveName_1 = firstKey.slice(1);
                     var d = field.directives.find(function (d) { return d.name.value === directiveName_1; });
-                    var directiveArgs = d && argumentsObjectFromField(d, variables);
+                    var directiveArgs = d && utilities.argumentsObjectFromField(d, variables);
                     return directiveArgs && extractKeyPath(directiveArgs, keyPath.slice(1));
                 }
                 return;
@@ -1752,7 +1132,7 @@ function keyArgsFnFromSpecifier(specifier) {
     });
 }
 function collectSpecifierPaths(specifier, extractor) {
-    var merger = new DeepMerger;
+    var merger = new utilities.DeepMerger;
     return getSpecifierPaths(specifier).reduce(function (collected, path) {
         var _a;
         var toMerge = extractor(path);
@@ -1798,7 +1178,7 @@ function extractKeyPath(object, path, extract) {
     }, object));
 }
 function normalize(value) {
-    if (isNonNullObject(value)) {
+    if (utilities.isNonNullObject(value)) {
         if (isArray(value)) {
             return value.map(normalize);
         }
@@ -1807,10 +1187,10 @@ function normalize(value) {
     return value;
 }
 
-getStoreKeyName.setStringify(canonicalStringify);
+utilities.getStoreKeyName.setStringify(canonicalStringify);
 function argsFromFieldSpecifier(spec) {
     return spec.args !== void 0 ? spec.args :
-        spec.field ? argumentsObjectFromField(spec.field, spec.variables) : null;
+        spec.field ? utilities.argumentsObjectFromField(spec.field, spec.variables) : null;
 }
 var nullKeyFieldsFn = function () { return void 0; };
 var simpleKeyArgsFn = function (_args, context) { return context.fieldName; };
@@ -1938,7 +1318,7 @@ var Policies = (function () {
         var rootId = "ROOT_" + which.toUpperCase();
         var old = this.rootTypenamesById[rootId];
         if (typename !== old) {
-            __DEV__ ? tsInvariant.invariant(!old || old === which, "Cannot change root ".concat(which, " __typename more than once")) : tsInvariant.invariant(!old || old === which, 3);
+            __DEV__ ? globals.invariant(!old || old === which, "Cannot change root ".concat(which, " __typename more than once")) : globals.invariant(!old || old === which, 3);
             if (old)
                 delete this.rootIdsByTypename[old];
             this.rootIdsByTypename[typename] = rootId;
@@ -2022,7 +1402,7 @@ var Policies = (function () {
                 if (supertypeSet.has(supertype)) {
                     if (!typenameSupertypeSet.has(supertype)) {
                         if (checkingFuzzySubtypes) {
-                            __DEV__ && tsInvariant.invariant.warn("Inferring subtype ".concat(typename, " of supertype ").concat(supertype));
+                            __DEV__ && globals.invariant.warn("Inferring subtype ".concat(typename, " of supertype ").concat(supertype));
                         }
                         typenameSupertypeSet.add(supertype);
                     }
@@ -2075,8 +1455,8 @@ var Policies = (function () {
         }
         if (storeFieldName === void 0) {
             storeFieldName = fieldSpec.field
-                ? storeKeyNameFromField(fieldSpec.field, fieldSpec.variables)
-                : getStoreKeyName(fieldName, argsFromFieldSpecifier(fieldSpec));
+                ? utilities.storeKeyNameFromField(fieldSpec.field, fieldSpec.variables)
+                : utilities.getStoreKeyName(fieldName, argsFromFieldSpecifier(fieldSpec));
         }
         if (storeFieldName === false) {
             return fieldName;
@@ -2103,7 +1483,7 @@ var Policies = (function () {
         var policy = this.getFieldPolicy(options.typename, fieldName, false);
         var read = policy && policy.read;
         if (read) {
-            var readOptions = makeFieldFunctionOptions(this, objectOrReference, options, context, context.store.getStorage(isReference(objectOrReference)
+            var readOptions = makeFieldFunctionOptions(this, objectOrReference, options, context, context.store.getStorage(utilities.isReference(objectOrReference)
                 ? objectOrReference.__ref
                 : objectOrReference, storeFieldName));
             return cacheSlot.withValue(this.cache, read, [existing, readOptions]);
@@ -2149,7 +1529,7 @@ function makeFieldFunctionOptions(policies, objectOrReference, fieldSpec, contex
         fieldName: fieldName,
         storeFieldName: storeFieldName,
         variables: variables,
-        isReference: isReference,
+        isReference: utilities.isReference,
         toReference: toReference,
         storage: storage,
         cache: policies.cache,
@@ -2176,7 +1556,7 @@ function normalizeReadFieldOptions(readFieldArgs, objectOrReference, variables) 
         }
     }
     if (__DEV__ && options.from === void 0) {
-        __DEV__ && tsInvariant.invariant.warn("Undefined 'from' passed to readField with arguments ".concat(stringifyForDisplay(Array.from(readFieldArgs))));
+        __DEV__ && globals.invariant.warn("Undefined 'from' passed to readField with arguments ".concat(utilities.stringifyForDisplay(Array.from(readFieldArgs))));
     }
     if (void 0 === options.variables) {
         options.variables = variables;
@@ -2186,23 +1566,23 @@ function normalizeReadFieldOptions(readFieldArgs, objectOrReference, variables) 
 function makeMergeObjectsFunction(store) {
     return function mergeObjects(existing, incoming) {
         if (isArray(existing) || isArray(incoming)) {
-            throw __DEV__ ? new tsInvariant.InvariantError("Cannot automatically merge arrays") : new tsInvariant.InvariantError(4);
+            throw __DEV__ ? new globals.InvariantError("Cannot automatically merge arrays") : new globals.InvariantError(4);
         }
-        if (isNonNullObject(existing) &&
-            isNonNullObject(incoming)) {
+        if (utilities.isNonNullObject(existing) &&
+            utilities.isNonNullObject(incoming)) {
             var eType = store.getFieldValue(existing, "__typename");
             var iType = store.getFieldValue(incoming, "__typename");
             var typesDiffer = eType && iType && eType !== iType;
             if (typesDiffer) {
                 return incoming;
             }
-            if (isReference(existing) &&
+            if (utilities.isReference(existing) &&
                 storeValueIsStoreObject(incoming)) {
                 store.merge(existing.__ref, incoming);
                 return existing;
             }
             if (storeValueIsStoreObject(existing) &&
-                isReference(incoming)) {
+                utilities.isReference(incoming)) {
                 store.merge(existing, incoming.__ref);
                 return incoming;
             }
@@ -2232,9 +1612,9 @@ var StoreWriter = (function () {
     StoreWriter.prototype.writeToStore = function (store, _a) {
         var _this = this;
         var query = _a.query, result = _a.result, dataId = _a.dataId, variables = _a.variables, overwrite = _a.overwrite;
-        var operationDefinition = getOperationDefinition(query);
+        var operationDefinition = utilities.getOperationDefinition(query);
         var merger = makeProcessedFieldsMerger();
-        variables = tslib.__assign(tslib.__assign({}, getDefaultValues(operationDefinition)), variables);
+        variables = tslib.__assign(tslib.__assign({}, utilities.getDefaultValues(operationDefinition)), variables);
         var context = {
             store: store,
             written: Object.create(null),
@@ -2243,7 +1623,7 @@ var StoreWriter = (function () {
             },
             variables: variables,
             varString: canonicalStringify(variables),
-            fragmentMap: createFragmentMap(getFragmentDefinitions(query)),
+            fragmentMap: utilities.createFragmentMap(utilities.getFragmentDefinitions(query)),
             overwrite: !!overwrite,
             incomingById: new Map,
             clientOnly: false,
@@ -2257,15 +1637,15 @@ var StoreWriter = (function () {
             mergeTree: { map: new Map },
             context: context,
         });
-        if (!isReference(ref)) {
-            throw __DEV__ ? new tsInvariant.InvariantError("Could not identify object ".concat(JSON.stringify(result))) : new tsInvariant.InvariantError(6);
+        if (!utilities.isReference(ref)) {
+            throw __DEV__ ? new globals.InvariantError("Could not identify object ".concat(JSON.stringify(result))) : new globals.InvariantError(6);
         }
         context.incomingById.forEach(function (_a, dataId) {
             var storeObject = _a.storeObject, mergeTree = _a.mergeTree, fieldNodeSet = _a.fieldNodeSet;
-            var entityRef = makeReference(dataId);
+            var entityRef = utilities.makeReference(dataId);
             if (mergeTree && mergeTree.map.size) {
                 var applied = _this.applyMerges(mergeTree, entityRef, storeObject, context);
-                if (isReference(applied)) {
+                if (utilities.isReference(applied)) {
                     return;
                 }
                 storeObject = applied;
@@ -2302,14 +1682,14 @@ var StoreWriter = (function () {
         var policies = this.cache.policies;
         var incoming = Object.create(null);
         var typename = (dataId && policies.rootTypenamesById[dataId]) ||
-            getTypenameFromResult(result, selectionSet, context.fragmentMap) ||
+            utilities.getTypenameFromResult(result, selectionSet, context.fragmentMap) ||
             (dataId && context.store.get(dataId, "__typename"));
         if ("string" === typeof typename) {
             incoming.__typename = typename;
         }
         var readField = function () {
             var options = normalizeReadFieldOptions(arguments, incoming, context.variables);
-            if (isReference(options.from)) {
+            if (utilities.isReference(options.from)) {
                 var info = context.incomingById.get(options.from.__ref);
                 if (info) {
                     var result_1 = policies.readField(tslib.__assign(tslib.__assign({}, options), { from: info.storeObject }), context);
@@ -2323,7 +1703,7 @@ var StoreWriter = (function () {
         var fieldNodeSet = new Set();
         this.flattenFields(selectionSet, result, context, typename).forEach(function (context, field) {
             var _a;
-            var resultFieldKey = resultKeyNameFromField(field);
+            var resultFieldKey = utilities.resultKeyNameFromField(field);
             var value = result[resultFieldKey];
             fieldNodeSet.add(field);
             if (value !== void 0) {
@@ -2339,7 +1719,7 @@ var StoreWriter = (function () {
                     : context, childTree);
                 var childTypename = void 0;
                 if (field.selectionSet &&
-                    (isReference(incomingValue) ||
+                    (utilities.isReference(incomingValue) ||
                         storeValueIsStoreObject(incomingValue))) {
                     childTypename = readField("__typename", incomingValue);
                 }
@@ -2361,9 +1741,9 @@ var StoreWriter = (function () {
             else if (__DEV__ &&
                 !context.clientOnly &&
                 !context.deferred &&
-                !addTypenameToDocument.added(field) &&
+                !utilities.addTypenameToDocument.added(field) &&
                 !policies.getReadFunction(typename, field.name.value)) {
-                __DEV__ && tsInvariant.invariant.error("Missing field '".concat(resultKeyNameFromField(field), "' while writing result ").concat(JSON.stringify(result, null, 2)).substring(0, 1000));
+                __DEV__ && globals.invariant.error("Missing field '".concat(utilities.resultKeyNameFromField(field), "' while writing result ").concat(JSON.stringify(result, null, 2)).substring(0, 1000));
             }
         });
         try {
@@ -2384,7 +1764,7 @@ var StoreWriter = (function () {
                 throw e;
         }
         if ("string" === typeof dataId) {
-            var dataRef = makeReference(dataId);
+            var dataRef = utilities.makeReference(dataId);
             var sets = context.written[dataId] || (context.written[dataId] = []);
             if (sets.indexOf(selectionSet) >= 0)
                 return dataRef;
@@ -2412,7 +1792,7 @@ var StoreWriter = (function () {
     StoreWriter.prototype.processFieldValue = function (value, field, context, mergeTree) {
         var _this = this;
         if (!field.selectionSet || value === null) {
-            return __DEV__ ? cloneDeep(value) : value;
+            return __DEV__ ? utilities.cloneDeep(value) : value;
         }
         if (isArray(value)) {
             return value.map(function (item, i) {
@@ -2429,7 +1809,7 @@ var StoreWriter = (function () {
         });
     };
     StoreWriter.prototype.flattenFields = function (selectionSet, result, context, typename) {
-        if (typename === void 0) { typename = getTypenameFromResult(result, selectionSet, context.fragmentMap); }
+        if (typename === void 0) { typename = utilities.getTypenameFromResult(result, selectionSet, context.fragmentMap); }
         var fieldMap = new Map();
         var policies = this.cache.policies;
         var limitingTrie = new trie.Trie(false);
@@ -2439,24 +1819,24 @@ var StoreWriter = (function () {
                 return;
             visitedNode.visited = true;
             selectionSet.selections.forEach(function (selection) {
-                if (!shouldInclude(selection, context.variables))
+                if (!utilities.shouldInclude(selection, context.variables))
                     return;
                 var clientOnly = inheritedContext.clientOnly, deferred = inheritedContext.deferred;
                 if (!(clientOnly && deferred) &&
-                    isNonEmptyArray(selection.directives)) {
+                    utilities.isNonEmptyArray(selection.directives)) {
                     selection.directives.forEach(function (dir) {
                         var name = dir.name.value;
                         if (name === "client")
                             clientOnly = true;
                         if (name === "defer") {
-                            var args = argumentsObjectFromField(dir, context.variables);
+                            var args = utilities.argumentsObjectFromField(dir, context.variables);
                             if (!args || args.if !== false) {
                                 deferred = true;
                             }
                         }
                     });
                 }
-                if (isField(selection)) {
+                if (utilities.isField(selection)) {
                     var existing = fieldMap.get(selection);
                     if (existing) {
                         clientOnly = clientOnly && existing.clientOnly;
@@ -2465,7 +1845,7 @@ var StoreWriter = (function () {
                     fieldMap.set(selection, getContextFlavor(context, clientOnly, deferred));
                 }
                 else {
-                    var fragment = getFragmentFromSelection(selection, context.fragmentMap);
+                    var fragment = utilities.getFragmentFromSelection(selection, context.fragmentMap);
                     if (fragment &&
                         policies.fragmentMatches(fragment, typename, result, context.variables)) {
                         flatten(fragment.selectionSet, getContextFlavor(context, clientOnly, deferred));
@@ -2478,12 +1858,12 @@ var StoreWriter = (function () {
     StoreWriter.prototype.applyMerges = function (mergeTree, existing, incoming, context, getStorageArgs) {
         var _a;
         var _this = this;
-        if (mergeTree.map.size && !isReference(incoming)) {
+        if (mergeTree.map.size && !utilities.isReference(incoming)) {
             var e_1 = (!isArray(incoming) &&
-                (isReference(existing) || storeValueIsStoreObject(existing))) ? existing : void 0;
+                (utilities.isReference(existing) || storeValueIsStoreObject(existing))) ? existing : void 0;
             var i_1 = incoming;
             if (e_1 && !getStorageArgs) {
-                getStorageArgs = [isReference(e_1) ? e_1.__ref : e_1];
+                getStorageArgs = [utilities.isReference(e_1) ? e_1.__ref : e_1];
             }
             var changedFields_1;
             var getValue_1 = function (from, name) {
@@ -2505,7 +1885,7 @@ var StoreWriter = (function () {
                     changedFields_1.set(storeFieldName, aVal);
                 }
                 if (getStorageArgs) {
-                    tsInvariant.invariant(getStorageArgs.pop() === storeFieldName);
+                    globals.invariant(getStorageArgs.pop() === storeFieldName);
                 }
             });
             if (changedFields_1) {
@@ -2575,7 +1955,7 @@ function warnAboutDataLoss(existingRef, incomingObj, storeFieldName, store) {
     var incoming = getChild(incomingObj);
     if (!incoming)
         return;
-    if (isReference(existing))
+    if (utilities.isReference(existing))
         return;
     if (equality.equal(existing, incoming))
         return;
@@ -2600,7 +1980,7 @@ function warnAboutDataLoss(existingRef, incomingObj, storeFieldName, store) {
             }
         });
     }
-    __DEV__ && tsInvariant.invariant.warn("Cache data may be lost when replacing the ".concat(fieldName, " field of a ").concat(parentType, " object.\n\nTo address this problem (which is not a bug in Apollo Client), ").concat(childTypenames.length
+    __DEV__ && globals.invariant.warn("Cache data may be lost when replacing the ".concat(fieldName, " field of a ").concat(parentType, " object.\n\nTo address this problem (which is not a bug in Apollo Client), ").concat(childTypenames.length
         ? "either ensure all objects of type " +
             childTypenames.join(" and ") + " have an ID or a custom merge function, or "
         : "", "define a custom merge function for the ").concat(typeDotName, " field, so InMemoryCache can safely merge these objects:\n\n  existing: ").concat(JSON.stringify(existing).slice(0, 1000), "\n  incoming: ").concat(JSON.stringify(incoming).slice(0, 1000), "\n\nFor more information about these options, please refer to the documentation:\n\n  * Ensuring entity objects have IDs: https://go.apollo.dev/c/generating-unique-identifiers\n  * Defining custom merge functions: https://go.apollo.dev/c/merging-non-normalized-objects\n"));
@@ -2752,13 +2132,13 @@ var InMemoryCache = (function (_super) {
         return (optimistic ? this.optimisticData : this.data).release(rootId);
     };
     InMemoryCache.prototype.identify = function (object) {
-        if (isReference(object))
+        if (utilities.isReference(object))
             return object.__ref;
         try {
             return this.policies.identify(object)[0];
         }
         catch (e) {
-            __DEV__ && tsInvariant.invariant.warn(e);
+            __DEV__ && globals.invariant.warn(e);
         }
     };
     InMemoryCache.prototype.evict = function (options) {
@@ -2864,7 +2244,7 @@ var InMemoryCache = (function (_super) {
         if (this.addTypename) {
             var result = this.typenameDocumentCache.get(document);
             if (!result) {
-                result = addTypenameToDocument(document);
+                result = utilities.addTypenameToDocument(document);
                 this.typenameDocumentCache.set(document, result);
                 this.typenameDocumentCache.set(result, result);
             }
@@ -2898,6 +2278,8 @@ var InMemoryCache = (function (_super) {
     return InMemoryCache;
 }(ApolloCache));
 
+exports.isReference = utilities.isReference;
+exports.makeReference = utilities.makeReference;
 exports.ApolloCache = ApolloCache;
 exports.InMemoryCache = InMemoryCache;
 exports.MissingFieldError = MissingFieldError;
@@ -2906,7 +2288,5 @@ exports.cacheSlot = cacheSlot;
 exports.canonicalStringify = canonicalStringify;
 exports.defaultDataIdFromObject = defaultDataIdFromObject;
 exports.fieldNameFromStoreName = fieldNameFromStoreName;
-exports.isReference = isReference;
-exports.makeReference = makeReference;
 exports.makeVar = makeVar;
 //# sourceMappingURL=cache.cjs.map
